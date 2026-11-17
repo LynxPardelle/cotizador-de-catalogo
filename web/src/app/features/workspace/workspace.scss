@@ -1,0 +1,48 @@
+main {
+  width: min(100% - 2.5rem, 64rem);
+  margin-inline: auto;
+  padding-block: clamp(2rem, 9vw, 6rem);
+}
+
+header {
+  border-bottom: 1px solid #c9d4dc;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+}
+
+h1 {
+  margin: 0;
+  color: #14283c;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.2rem;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+
+li {
+  background: #fff;
+  border: 1px solid #c9d4dc;
+  border-radius: 0.4rem;
+  padding: 1rem 1.25rem;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+p {
+  margin-bottom: 0;
+  line-height: 1.5;
+}

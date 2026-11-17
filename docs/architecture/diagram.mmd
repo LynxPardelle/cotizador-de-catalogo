@@ -1,0 +1,8 @@
+flowchart LR
+    Staff["Operador Angular"] --> Api["HTTP API"]
+    Api --> Health["Lambda de salud"]
+    Api -.-> Identity["Validación JWT"]
+    Api -.-> DomainA["Catálogos | Lambda"]
+    Api -.-> DomainB["Cotizaciones | Lambda"]
+    DomainA -.-> StoreA["DynamoDB bajo demanda"]
+    DomainB -.-> StoreB["DynamoDB bajo demanda"]

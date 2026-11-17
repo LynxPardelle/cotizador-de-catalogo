@@ -1,0 +1,10 @@
+/.aws-sam/
+/infra/.aws-sam/
+/web/node_modules/
+/web/.angular/
+/web/dist/
+/web/coverage/
+.env
+.env.*
+!.env.example
+samconfig.toml

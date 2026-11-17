@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Base de AWS Lambda para Cotizador de Catálogo.
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+
+Resources:
+  HealthApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+
+  HealthLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      CodeUri: ../services/health/
+      Handler: index.handler
+      Timeout: 5
+      MemorySize: 128
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref HealthLogGroup
+      Events:
+        HealthRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HealthApi
+            Path: /health
+            Method: GET
+            PayloadFormatVersion: '2.0'
+
+Outputs:
+  HealthUrl:
+    Value: !Sub https://${HealthApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Stage}/health
