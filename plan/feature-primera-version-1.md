@@ -1,6 +1,6 @@
 ---
 goal: Primera versión de CotiTrama
-version: '1.3'
+version: '1.4'
 date_created: 2026-11-17
 date_updated: 2026-11-19
 status: 'In Progress'
@@ -38,9 +38,10 @@ TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrado
 ## Ampliación autorizada: sitio, registro y suscripciones
 
 - **TASK-007** Landing pública SSR, registro Cognito con PKCE y verificación de correo, organización propia por cuenta confirmada e idempotencia del alta. Implementada y verificada en development: recepción y confirmación con dos correos reales y persistencia de perfil/pertenencia antes de consultar el contexto de Equipo.
-- **TASK-008** Propuesta de planes mensuales antes de impuestos: Esencial $399 MXN (2 miembros, 2 catálogos, 100 propuestas/mes), Equipo $1,199 (8/10/1,000), Empresa $3,499 (25/50/5,000). Fuente compartida `config/plans.json`, estado `proposal`; precios/límites por validar con el piloto, sin cobros ni cuotas de pago activas. [Matriz y escenario de costos](../docs/planes-suscripcion.md). Stripe permanece pendiente por instrucción del usuario.
+- **TASK-008** Propuesta de planes mensuales antes de impuestos: Esencial $399 MXN (2 miembros, 2 catálogos, 100 propuestas/mes), Equipo $1,199 (8/10/1,000), Empresa $3,499 (25/50/5,000). Fuente compartida `services/shared/plans.json`, estado `proposal`; precios/límites por validar con el piloto, sin cobros ni cuotas de pago activas. [Matriz y escenario de costos](../docs/planes-suscripcion.md). Stripe permanece pendiente por instrucción del usuario.
 - **TASK-009** Incorporar el trabajo en development, commit/push, validar CI y desplegar exclusivamente development. Ejecutar el flujo comercial con Cognito/HTTP API/DynamoDB y la URL pública, comprobar aislamiento y preservar los otros proyectos. Completada: commits/push, CI verde y development desplegado con aceptación AWS y navegador.
 - **TASK-010** Servicio Equipo y tabla propia `MembersTable`, contexto de organización, selector Angular y gestión de miembros. Autoridad de pertenencias en DynamoDB consultada por IAM; cambios/retiradas con protección transaccional del último administrador. Invitaciones manuales de siete días con hash persistido y aceptación ligada al correo verificado. Migración de grupos consultados directamente a Cognito una sola vez mediante `PROFILE`, sin restaurar accesos retirados. Núcleo desplegado y verificado en AWS y navegador con JWT real (19/11/2026): 14 comprobaciones AWS, concurrencia de últimos administradores, cambio/retirada efectiva de permisos, migración, aceptación e aislamiento entre espacios. Las revisiones y comprobaciones de cada entrega están en [Verificación](../docs/verificacion.md).
+- **TASK-011** Límites operativos Esencial, Equipo y Empresa, contadores transaccionales por dominio, mes UTC, archivado/reactivación de catálogos, avisos 80%/100%/exceso y pantalla `/consumo`. Canonical `services/shared/plans.json`, plan autoritativo en Equipo y asignación por operador IAM sin cobros. La aceptación local/AWS de este incremento se registra por separado en [Verificación](../docs/verificacion.md).
 
 ## Verificación y evidencia
 
@@ -51,6 +52,7 @@ TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrado
 - **TEST-005** Informe `artifacts/pilot-local.json`: carga sintética reproducible, con límites y métricas comerciales explícitamente pendientes.
 - **TEST-006** Aceptación AWS descrita en [Operación](../docs/operacion.md): Cognito/PKCE, JWT, transacciones DynamoDB reales, OAC, DNS/TLS, logs, latencia, aislamiento y permisos.
 - **TEST-007** Equipo: autorización con pertenencias vigentes, rechazo de selección ajena y de claims históricos; invitación al correo correcto, caducidad, idempotencia y no restauración tras retirada. Cambios concurrentes preservan un administrador. Migración inicial conserva `PROFILE` y no repuebla una pertenencia eliminada. La aceptación del núcleo se realizó con DynamoDB/Cognito reales y navegador autenticado; conservar estas comprobaciones al actualizar el servicio.
+- **TEST-008** Consumo: contador y creación atómicos, última plaza concurrente, revisiones y reintentos sin consumo adicional, boot de históricos paginado, mes UTC, archivado/liberación/reactivación, reducción con exceso y conservación de snapshots. Avisos sin datos en SSR ni respuestas cruzadas entre cuentas/organizaciones. AWS distingue emisiones reales de preparaciones sintéticas para los bordes altos; no se acredita carga masiva con un contador preparado.
 
 Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm run smoke:ssr`, `npm run pilot`, `cfn-lint infra/template.yaml`. Los resultados observados y las limitaciones se registran en [Verificación](../docs/verificacion.md).
 
@@ -65,7 +67,7 @@ Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm r
 | Datos sintéticos | `services/fixtures/catalog.mjs` |
 | Angular por flujo | `web/src/app/features/` |
 | Sesión y contratos frontend | `web/src/app/core/`, `web/src/app/data/` |
-| Propuesta compartida de planes | `config/plans.json`, `docs/planes-suscripcion.md` |
+| Propuesta compartida de planes | `services/shared/plans.json`, `docs/planes-suscripcion.md` |
 | Angular SSR | `web/src/server.ts`, `tools/package-web.mjs` |
 | Demo y piloto | `tools/demo.mjs`, `tools/pilot.mjs` |
 | CI | `.github/workflows/ci.yml` |
@@ -74,7 +76,7 @@ Se conserva Node.js 24, Angular 22 y NgRx Signals 22; los lockfiles fijan las de
 
 ## Fuera del primer flujo
 
-No se incluyen cobros/licencias automáticas, cuotas de suscripción activas, exportación PDF, importaciones largas, envío automático del correo de invitación, CRM, SSO empresarial ni SLA. Las invitaciones manuales y la selección de espacios sí forman parte del núcleo de Equipo aceptado técnicamente en development. SQS para documentos y Step Functions para importaciones se incorporarán al existir esos requisitos. El primer piloto opera una moneda por catálogo y cantidades enteras.
+No se incluyen cobros/licencias automáticas, contratación de suscripciones, exportación PDF, importaciones largas, envío automático del correo de invitación, CRM, SSO empresarial ni SLA. Los límites operativos sí forman parte del piloto sin cargos. Las invitaciones manuales y la selección de espacios forman parte del núcleo de Equipo aceptado técnicamente en development. SQS para documentos y Step Functions para importaciones se incorporarán al existir esos requisitos. El primer piloto opera una moneda por catálogo y cantidades enteras.
 
 ## Primer pendiente para continuar desde remoto
 

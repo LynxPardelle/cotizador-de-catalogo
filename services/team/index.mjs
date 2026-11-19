@@ -3,6 +3,7 @@ import { accessSubject, requireRole } from '../shared/auth.mjs';
 import { HttpError, badRequest, notFound } from '../shared/errors.mjs';
 import { httpHandler, jsonBody, requireId, response } from '../shared/http.mjs';
 import { roles, subjectId, normalizeEmail, noAccess, hashToken, invitationForRecipient, invitationView, ownOrganization } from './domain.mjs';
+import { planFor, usageMetric } from '../shared/quota.mjs';
 
 export function createTeamHandler({repository,users,clock=()=>new Date(),newToken=()=>randomBytes(32).toString('base64url'),userPoolId}={}) {
   async function verifiedUser(subject) {
@@ -31,13 +32,13 @@ export function createTeamHandler({repository,users,clock=()=>new Date(),newToke
     if(selected && !memberships.some(member=>member.organizationId===selected)) {if(recoverSelection) selected=undefined;else throw noAccess();}
     const defaultId=profile?.defaultOrganizationId;
     const activeOrganizationId=selected ?? (memberships.some(member=>member.organizationId===defaultId) ? defaultId : memberships[0]?.organizationId ?? null);
-    return {memberships,activeOrganizationId};
+    return {memberships,activeOrganizationId,plan:activeOrganizationId ? await repository.plan(activeOrganizationId) : planFor()};
   }
   async function authorize(subject,selected) {
     const current=await context(subject,selected);
     const member=current.memberships.find(member=>member.organizationId===current.activeOrganizationId);
     if(!member) throw noAccess();
-    return {subject,organizationId:member.organizationId,role:member.role};
+    return {subject,organizationId:member.organizationId,role:member.role,plan:current.plan};
   }
   const publicHandler=httpHandler(async(event,correlationId)=>{
     const subject=subjectId(accessSubject(event));
@@ -54,7 +55,9 @@ export function createTeamHandler({repository,users,clock=()=>new Date(),newToke
       const membership=await repository.acceptInvitation(tokenHash,subject,user.email,now);
       return response(200,{membership},correlationId);
     }
-    const user=await authorize(subject,selected);requireRole(user,['admin']);
+    const user=await authorize(subject,selected);
+    if(method==='GET' && path==='/api/v1/team/usage') return response(200,{plan:user.plan,billingEnabled:false,limitsEnforced:true,members:usageMetric(await repository.memberCount(user.organizationId),user.plan.limits.members)},correlationId);
+    requireRole(user,['admin']);
     if(method==='GET' && path==='/api/v1/team/members') return response(200,{members:await repository.members(user.organizationId)},correlationId);
     if(method==='POST' && path==='/api/v1/team/invitations') {
       const body=jsonBody(event);

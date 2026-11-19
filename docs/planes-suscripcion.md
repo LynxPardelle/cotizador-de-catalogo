@@ -1,14 +1,14 @@
 # Planes de suscripción de CotiTrama
 
-Propuesta comercial de trabajo, revisada el 19 de noviembre de 2026. Los planes están en preparación: **precios y límites propuestos**, antes de impuestos, sin contratación ni cobro automático. El piloto continúa sin cargos. Crear una cuenta o participar en el piloto no activa una suscripción. Stripe y la gestión del ciclo de suscripción quedan pendientes.
+Propuesta comercial de trabajo, revisada el 19 de noviembre de 2026. Los precios siguen propuestos, antes de impuestos, sin contratación ni cobro automático. Los límites operativos por plan se aplican durante el piloto, que continúa sin cargos. Crear una cuenta o participar en el piloto no activa una suscripción. Stripe y la gestión del ciclo de suscripción quedan pendientes.
 
 ## Valor y unidad de contratación
 
 CotiTrama propone una suscripción por organización y equipo comercial. El valor es convertir catálogos y reglas en propuestas cuyo desglose se puede volver a consultar después de publicar precios nuevos. El piloto debe medir minutos por cotización, correcciones por errores de precio y reutilización de reglas antes de fijar precios o afirmar ahorro.
 
-La base de cada plan combina miembros del equipo y catálogos activos; el volumen de propuestas emitidas por mes permite dimensionar uso. Las simulaciones se miden para operar el servicio, sin convertir cada ajuste de una cotización en un cargo. Los números siguientes son una hipótesis para contrastar con el piloto, no demanda ni disposición a pagar validadas. Hoy no existen cuotas de pago ni diferenciación de acceso por suscripción en el backend.
+La base de cada plan combina miembros del equipo y catálogos activos; el volumen de propuestas emitidas por mes permite dimensionar uso. Las simulaciones no consumen propuestas ni generan un cargo. Los números siguientes se aplican como capacidades operativas del piloto y siguen siendo una hipótesis comercial para contrastar, no demanda ni disposición a pagar validadas. No existe una suscripción de pago activa.
 
-La fuente compartida de importes y límites es [`config/plans.json`](../config/plans.json). Su estado `proposal`, `billingEnabled: false` y `limitsEnforced: false` expresa que no activa pagos ni cuotas comerciales. `priceMinor` contiene centavos como cadena; la periodicidad propuesta es mensual. Los controles operativos del piloto son independientes de estos planes.
+La fuente compartida de importes y límites es [`services/shared/plans.json`](../services/shared/plans.json), empaquetada en las Lambdas e importada por Angular. Su estado `proposal` y `billingEnabled: false` mantienen los precios en evaluación y el piloto sin cobros; `limitsEnforced: true` activa sus capacidades en backend. `priceMinor` contiene centavos como cadena y la periodicidad propuesta es mensual. Un espacio nuevo usa Esencial. El operador asigna Equipo o Empresa durante el piloto mediante IAM, sin una ruta pública de cambio de plan.
 
 ## Propuesta de planes
 
@@ -22,7 +22,7 @@ El núcleo propuesto es común: publicación de revisiones, configuración y reg
 
 Las llamadas a la acción son «Crear cuenta para el piloto», «Explorar el piloto en equipo» y «Evaluar el piloto». La presentación pública debe conservar «precio propuesto» y «el piloto continúa sin cargos» junto a los importes; no debe parecer un checkout activo.
 
-Definiciones para implementar las cuotas más adelante: un miembro es una pertenencia activa a la organización, incluido su administrador; un catálogo activo es un identificador habilitado para nuevas propuestas, sin contar cada revisión como otro catálogo; una propuesta es una emisión nueva confirmada por el servidor. Consultas, simulaciones y reintentos con la misma clave idempotente no cuentan otra vez. El período propuesto es el mes calendario UTC hasta que el ciclo de facturación requiera otra decisión explícita. La pantalla no constituye la autoridad de consumo.
+Un miembro es una pertenencia activa a la organización, incluido su administrador; las invitaciones pendientes no reservan cupo. Un catálogo activo es un identificador habilitado para nuevas propuestas, sin contar cada revisión como otro catálogo; archivar libera capacidad y reactivar vuelve a comprobarla. Una propuesta es una emisión nueva confirmada por el servidor. Consultas, simulaciones y reintentos con la misma clave idempotente no cuentan otra vez. El período es el mes calendario UTC hasta que el ciclo de facturación requiera otra decisión explícita. La pantalla no constituye la autoridad de consumo.
 
 La matriz expresa posicionamiento, no tres productos habilitados ni prestaciones exclusivas ya impuestas por el sistema. Las capacidades descritas como disponibles corresponden al código del proyecto; su publicación en la nube y aceptación con personas se comprueban por separado. El registro autónomo y el alta de organización se verifican como parte del flujo de incorporación, sin conceder por ello un plan de pago.
 
@@ -54,9 +54,9 @@ Antes de convertir la hipótesis en oferta, entrevistar organizaciones del secto
 
 El piloto es para uso comercial interactivo autorizado de la organización. Importaciones masivas, pruebas de carga, robots y procesamiento por lotes requieren evaluación previa de capacidad. El throttling de API es un control operativo compartido y no representa una cuota contractual de suscripción.
 
-Antes de vender paquetes con límites se necesitan contadores por organización y período, autorizaciones de plan verificadas en servidor, avisos de consumo y una política explícita de excedentes. Los reintentos idempotentes no deben consumir dos propuestas de la cuota. Una reducción de plan debe controlar nuevas operaciones, conservando el acceso a las propuestas ya emitidas según las condiciones acordadas.
+El backend mantiene contadores por organización y período y comprueba el plan actual al autorizar la operación. El incremento comparte transacción con la operación que consume capacidad. La pantalla `/consumo` y la navegación muestran avisos desde el 80%, al alcanzar el límite y cuando una reducción deja exceso. Los reintentos idempotentes no consumen dos propuestas. Una reducción controla nuevas operaciones y conserva el acceso a propuestas emitidas. [Diseño de límites y activación](architecture/003-limites-y-consumo.md).
 
-Política propuesta de excedentes: avisar antes de llegar al límite y, al alcanzarlo, impedir nuevas emisiones hasta reinicio de período o ampliación expresamente elegida; no cobrar excedentes de manera automática. Una reducción se aplicaría al siguiente período acordado. Si hay más miembros o catálogos que el nuevo paquete, el administrador debe poder resolver la capacidad antes del cambio sin perder su cuenta ni sus datos. Suspender nuevas invitaciones, publicaciones o emisiones según corresponda no autoriza borrar propuestas o revisiones. Estos comportamientos necesitan implementación y aceptación antes de ofrecer contratación.
+Al alcanzar el límite de propuestas, se impiden nuevas emisiones hasta el reinicio de período o una ampliación asignada por el operador; no se cobran excedentes automáticamente. Al agotar miembros o catálogos, se impide sumar capacidad y se permite retirar accesos o archivar catálogos. Las revisiones de un catálogo ya activo no cuentan otro catálogo. Si una reducción deja exceso, se conserva lo existente y se bloquea el crecimiento de la dimensión agotada. El ciclo contractual de futuras reducciones se definirá antes de contratar suscripciones.
 
 Las propuestas emitidas son snapshots comerciales inmutables. No se borran ni recalculan por publicar otra versión, agotar una cuota o cambiar de plan. Las tablas actuales no aplican una expiración automática a esos snapshots. La caducidad comercial de una propuesta limita su vigencia, no determina su borrado. La retención y eliminación de información al cerrar una cuenta requieren condiciones explícitas y un procedimiento específico; no se promete conservación indefinida.
 
@@ -111,6 +111,6 @@ Fuera del variable calculado quedan DNS y artefactos compartidos, alarmas, copia
 
 1. Validar el flujo de registro, pertenencia, catálogo, emisión y reapertura en el ambiente de pruebas, siguiendo `development → testing → main`.
 2. Medir costos y uso del piloto, contrastar disposición a pagar por estos paquetes y confirmar o corregir límites, precios e impuestos.
-3. Implementar derechos de acceso y contadores en backend, con reglas de excedentes, cancelación y conservación verificables.
+3. Mantener las comprobaciones de contadores, idempotencia, avisos, excedentes y conservación; definir la cancelación y el ciclo contractual antes de contratar.
 4. Integrar y verificar suscripciones, webhooks idempotentes y estados de pago cuando se retome el trabajo pendiente de Stripe. El navegador no decide el plan efectivo.
 5. Revisar condiciones comerciales, privacidad, correo, soporte y texto público antes de ofrecer contratación.

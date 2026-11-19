@@ -1,5 +1,25 @@
 # Verificación AWS de CotiTrama en development
 
+## Límites y consumo por plan
+
+El helper `tools/quota-smoke.mjs` usa únicamente development, exige UPDATE_COMPLETE y prepara tres cuentas `ct-quota-…@example.invalid`, con correos suprimidos y credenciales privadas ignoradas por Git. No reutiliza organizaciones de personas ni tablas de otros productos.
+
+```powershell
+node --use-system-ca tools/quota-smoke.mjs --prepare
+npm run smoke:quotas:development
+node --use-system-ca tools/quota-smoke.mjs --browser
+node --use-system-ca tools/quota-smoke.mjs --browser-limit
+npm run cleanup:quotas:development
+```
+
+`--verify` emite 100 propuestas reales de Esencial y comprueba avisos al 80%/100%, rechazo de la siguiente, replay sin otro consumo, conflicto de contenido, lectura y preview al límite. Verifica IDs de catálogo frente a revisiones, archivado/reactivación y la última plaza de miembros concurrente. Para Equipo y Empresa prepara contadores sintéticos justo antes de los bordes y ejecuta transacciones reales contra esos bordes: no acredita 1,000 o 5,000 emisiones ni una prueba de carga sostenida. Esas preparaciones sólo admiten campos de contador de las organizaciones QA registradas, se anotan antes en un journal privado y se restauran en finally al recuento real de datos. Una reducción vuelve a Esencial y conserva propuestas y lecturas mientras informa exceso y bloquea crecimiento.
+
+`--browser` deja una cuenta QA con un catálogo, un miembro y 80 propuestas realmente emitidas, sin preparar contadores, para comprobar `/consumo` con Cognito/PKCE/JWT. `--browser-limit` completa la misma cuenta a 100 para probar el rechazo de una emisión nueva en la interfaz y conservar el aviso al recargar. Las invocaciones IAM del script se distinguen de esta aceptación por navegador.
+
+El informe `artifacts/quota-smoke.json` conserva cada modo en runs y declara las preparaciones de borde. Las contraseñas y enlaces sólo se guardan en `artifacts/quota-qa-private.json`; no imprimir ni publicar ese archivo. Al cerrar la aceptación, cleanup verifica pool, sub, email y organización derivados, elimina las tres cuentas y sus grupos vacíos y borra el archivo privado. Conserva los registros sintéticos de DynamoDB. Si verify falla, recuperar cualquier journal pendiente, limpiar y preparar un run nuevo antes de repetir: el modo verify no finge reanudar una secuencia parcialmente completada.
+
+## Flujo comercial y Equipo
+
 `node --use-system-ca tools/aws-smoke.mjs --verify` prepara dos cuentas QA sintéticas y comprueba el flujo contra los recursos ya desplegados. Requiere AWS CLI, dependencias de `services/` y acceso IAM autorizado. El script acepta únicamente el stack `cotitrama-development`, región `us-east-1`, cuenta del certificado de `infra/environments.json` y origen `https://cotitrama-dev.lynxpardelle.com`.
 
 Modos:

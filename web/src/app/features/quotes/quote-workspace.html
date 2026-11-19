@@ -4,6 +4,7 @@
     <section class="empty-state"><h2>Tu espacio de cotizaciones</h2><p>Inicia sesión para consultar los catálogos de tu organización.</p><button type="button" (click)="auth.login('/cotizar')">Iniciar sesión</button></section>
   } @else {
     @if (store.error()) { <p class="notice error" role="alert">{{ store.error() }}</p> }
+    @if (store.errorCode() === 'PLAN_LIMIT_REACHED') { <p><a routerLink="/consumo">Ver consumo y próximo reinicio del cupo →</a></p> }
     @if (store.busy()) { <p class="loading" role="status">Procesando la cotización…</p> }
     @if (!store.catalogs().length && !store.busy()) { <section class="empty-state"><h2>Aún no hay catálogos publicados</h2><p>Publica la primera versión para empezar a cotizar.</p><a class="button" routerLink="/catalogos">Ir a catálogos</a><button class="text-button" type="button" (click)="load()">Volver a cargar</button></section> }
     @if (catalog(); as catalog) {

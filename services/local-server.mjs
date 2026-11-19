@@ -25,7 +25,7 @@ export async function createDemoServer() {
     if(result.error) throw new HttpError(result.error.statusCode,result.error.code,result.error.message);return result;
   };
   const catalog=createCatalogHandler({repository:repositories.catalog,authorize});
-  const quoting=createQuotingHandler({repository:repositories.quotes,readCatalog:(org,id,version)=>repositories.catalog.get(org,id,version),authorize});
+  const quoting=createQuotingHandler({repository:repositories.quotes,readCatalog:(org,id,version)=>repositories.catalog.getPublished(org,id,version),authorize});
   return createServer(async(req,res)=>{
     // The demo has no authentication and therefore serves loopback clients only.
     if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) {res.writeHead(403);res.end();return;}

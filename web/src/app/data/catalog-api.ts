@@ -6,7 +6,8 @@ import { Catalog, Preview, Quote, QuoteRequest } from './contracts';
 @Injectable({ providedIn: 'root' })
 export class CatalogApi {
   private readonly http = inject(HttpClient);
-  list() { return firstValueFrom(this.http.get<{ catalogs: Catalog[] }>('/api/v1/catalogs', { transferCache: false })); }
+  list() { return firstValueFrom(this.http.get<{ catalogs: Catalog[]; archivedCatalogs?: Catalog[] }>('/api/v1/catalogs', { transferCache: false })); }
+  status(id: string, active: boolean) { return firstValueFrom(this.http.patch<{ catalogId: string; active: boolean }>(`/api/v1/catalogs/${encodeURIComponent(id)}/status`, { active })); }
   version(id: string, version: number) { return firstValueFrom(this.http.get<Catalog>(`/api/v1/catalogs/${encodeURIComponent(id)}/versions/${version}`, { transferCache: false })); }
   publish(catalog: Catalog, key: string) { return firstValueFrom(this.http.post<Catalog>(`/api/v1/catalogs/${encodeURIComponent(catalog.catalogId)}/publications`, catalog, { headers: { 'Idempotency-Key': key } })); }
   preview(request: QuoteRequest) { return firstValueFrom(this.http.post<Preview>('/api/v1/quotes/preview', request)); }
@@ -21,3 +22,5 @@ export function apiMessage(error: unknown): string {
   if (candidate.status === 404) return 'No encontramos este recurso en tu organización.';
   return candidate.error?.error?.message ?? 'No pudimos completar la operación. Revisa tu conexión y vuelve a intentarlo.';
 }
+
+export function apiCode(error: unknown): string { return (error as { error?: { error?: { code?: string } } })?.error?.error?.code ?? ''; }

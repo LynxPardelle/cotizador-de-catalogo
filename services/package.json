@@ -12,6 +12,8 @@
     "shared/dynamo.mjs",
     "shared/errors.mjs",
     "shared/http.mjs",
+    "shared/plans.json",
+    "shared/quota.mjs",
     "shared/team-client.mjs",
     "team/index.mjs",
     "team/domain.mjs",

@@ -3,7 +3,8 @@ import { afterNextRender, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Auth } from '../../core/auth';
 import { WorkspaceContext } from '../../core/workspace-context';
-import { apiMessage } from '../../data/catalog-api';
+import { apiCode, apiMessage } from '../../data/catalog-api';
+import { UsageContext } from '../../core/usage-context';
 import { Invitation as InvitationDetails, roleLabel, TeamApi } from '../../data/team-api';
 
 @Component({
@@ -20,6 +21,7 @@ import { Invitation as InvitationDetails, roleLabel, TeamApi } from '../../data/
 export class Invitation {
   protected readonly auth = inject(Auth); private readonly api = inject(TeamApi); private readonly workspace = inject(WorkspaceContext); private readonly route = inject(ActivatedRoute); private readonly router = inject(Router);
   protected readonly invitation = signal<InvitationDetails | undefined>(undefined); protected readonly error = signal(''); protected readonly busy = signal(false); protected readonly accepted = signal(false); protected readonly roleLabel = roleLabel;
+  private readonly usage = inject(UsageContext);
   constructor() { afterNextRender(() => { if (this.auth.available) void this.load(); }); }
   private token() { return this.route.snapshot.paramMap.get('token') ?? ''; }
   private returnPath() { return `/invitacion/${encodeURIComponent(this.token())}`; }
@@ -34,11 +36,12 @@ export class Invitation {
   protected async accept() {
     if (this.busy() || !this.invitation()) return;
     this.busy.set(true); this.error.set('');
-    try { const result = await this.api.accept(this.token()); await this.workspace.load(result.membership.organizationId); this.invitation.set(undefined); this.accepted.set(true); await this.router.navigateByUrl('/cotizar'); }
+    try { const result = await this.api.accept(this.token()); await this.workspace.load(result.membership.organizationId); void this.usage.refresh(); this.invitation.set(undefined); this.accepted.set(true); await this.router.navigateByUrl('/cotizar'); }
     catch (error) { this.error.set(this.message(error)); }
     finally { this.busy.set(false); }
   }
   private message(error: unknown) {
+    if (apiCode(error) === 'PLAN_LIMIT_REACHED') return 'El espacio de la invitación no tiene cupo para otro miembro. Pide a su administrador que revise Consumo y gestione la capacidad.';
     const status = (error as { status?: number }).status;
     if (status === 410) return 'Esta invitación ha caducado. Pide al administrador que cree una nueva.';
     if (status === 404) return 'No encontramos esta invitación para tu cuenta. Comprueba que usas el correo al que la enviaron.';

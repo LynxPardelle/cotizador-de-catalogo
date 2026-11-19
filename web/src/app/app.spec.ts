@@ -7,11 +7,12 @@ import { RuntimeConfig } from './core/runtime-config';
 import { CatalogApi } from './data/catalog-api';
 import { Catalog } from './data/contracts';
 import { Auth } from './core/auth';
-import proposal from '../../../config/plans.json';
+import proposal from '../../../services/shared/plans.json';
 import { money } from './data/money';
 import { TeamApi } from './data/team-api';
 import { WorkspaceContext } from './core/workspace-context';
 import { Router } from '@angular/router';
+import { UsageContext } from './core/usage-context';
 
 describe('CotiTrama', () => {
   it('opens a branded workspace with accessible product navigation', async () => {
@@ -94,6 +95,7 @@ describe('CotiTrama', () => {
   });
 
   it('accepts an invitation and opens the joined organization without changing accounts', async () => {
+    TestBed.configureTestingModule({providers:[{provide:UsageContext,useValue:{load:async()=>{},refresh:async()=>{},reset:()=>{},alerts:()=>[]}}]});
     const accept = vi.fn(async () => ({ membership: { organizationId: 'joined-org', role: 'seller' } }));
     const team = { invitation: async () => ({ invitation: { organizationId: 'joined-org', email: 'person@example.com', role: 'seller', expiresAt: '2099-01-01T00:00:00Z' } }), accept };
     TestBed.configureTestingModule({ providers: [provideRouter(routes), provideHttpClient(), { provide: Auth, useValue: { available: true, role: 'seller', busy: () => false, error: () => '', logout: vi.fn() } }, { provide: TeamApi, useValue: team }, { provide: CatalogApi, useValue: { list: async () => ({ catalogs: [] }) } }] });
@@ -127,5 +129,26 @@ describe('CotiTrama', () => {
     const page = harness.routeNativeElement!;
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('ha caducado');
     expect([...page.querySelectorAll('button')].some((element) => element.textContent?.includes('Aceptar invitación'))).toBe(false);
+  });
+
+  it('offers an authenticated consumption route without a checkout action', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter(routes), provideHttpClient()] });
+    const harness = await RouterTestingHarness.create('/consumo');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent).toContain('Consumo');
+    expect(harness.routeNativeElement!.textContent).toContain('Inicia sesión');
+    expect(harness.routeNativeElement!.querySelector('a[href*="checkout"]')).toBeNull();
+  });
+
+  it('archives a catalogue only after confirmation and keeps its history visible',async()=>{
+    const catalog:Catalog={catalogId:'first',name:'Primer catálogo',version:1,currency:'MXN',currencyExponent:2,rounding:'half-up',validUntil:'2099-01-01T00:00:00Z',products:[{id:'desk',name:'Escritorio',basePriceMinor:'10000',options:[],incompatibleOptions:[]}],rules:[]};
+    let archived=false;const status=vi.fn(async(_id:string,active:boolean)=>{archived=!active;return {catalogId:'first',active};});
+    const api={list:async()=>({catalogs:archived?[]:[catalog],archivedCatalogs:archived?[catalog]:[]}),status};
+    TestBed.configureTestingModule({providers:[provideRouter(routes),provideHttpClient(),{provide:Auth,useValue:{available:true,role:'admin',busy:()=>false,error:()=>'',logout:vi.fn()}},{provide:CatalogApi,useValue:api}]});
+    const harness=await RouterTestingHarness.create('/catalogos');await harness.fixture.whenStable();
+    const page=harness.routeNativeElement!;
+    [...page.querySelectorAll<HTMLButtonElement>('button')].find(button=>button.textContent?.trim()==='Archivar')!.click();await harness.fixture.whenStable();
+    expect(status).not.toHaveBeenCalled();
+    [...page.querySelectorAll<HTMLButtonElement>('button')].find(button=>button.textContent?.trim()==='Sí, archivar')!.click();await harness.fixture.whenStable();
+    expect(status).toHaveBeenCalledWith('first',false);expect(page.textContent).toContain('Catálogos archivados');expect(page.textContent).toContain('Sus versiones y propuestas se conservan');
   });
 });

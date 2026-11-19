@@ -1,7 +1,8 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, QueryCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { HttpError, notFound } from '../shared/errors.mjs';
 import { noAccess, lastAdmin, membershipConflict, invitationForRecipient } from './domain.mjs';
+import { planFor, usageMetric, quotaExceeded } from '../shared/quota.mjs';
 
 const userKey=(subject,organizationId)=>({PK:`USER#${subject}`,SK:`ORG#${organizationId}`});
 const orgKey=(organizationId,subject)=>({PK:`ORG#${organizationId}`,SK:`MEMBER#${subject}`});
@@ -16,7 +17,12 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
   const get=async Key=>(await client.send(new GetCommand({TableName:table,Key,ConsistentRead:true}))).Item;
   const put=(Key,value,ConditionExpression=missing,extra={})=>({Put:{TableName:table,Item:{...Key,...value},ConditionExpression,...extra}});
   const caller=(org,subject)=>({ConditionCheck:{TableName:table,Key:userKey(subject,org),ConditionExpression:'#member.#role = :admin',ExpressionAttributeNames:roleNames,ExpressionAttributeValues:{':admin':'admin'}}});
-  const counter=(org,delta,last=false)=>({Update:{TableName:table,Key:metaKey(org),UpdateExpression:'ADD adminCount :delta',...(last ? {ConditionExpression:'adminCount > :one'} : {}),ExpressionAttributeValues:{':delta':delta,...(last ? {':one':1} : {})}}});
+  const counter=(org,delta,last=false,memberDelta=0,limit,planId)=>{
+    const conditions=last ? ['adminCount > :one'] : [];
+    if(memberDelta) conditions.push(memberDelta>0 ? (limit===undefined ? 'attribute_exists(memberCount)' : 'memberCount < :limit') : 'memberCount > :zero');
+    if(planId) conditions.push(planId==='esencial' ? '(attribute_not_exists(planId) OR planId = :planId)' : 'planId = :planId');
+    return {Update:{TableName:table,Key:metaKey(org),UpdateExpression:`ADD adminCount :delta${memberDelta ? ', memberCount :membersDelta' : ''}`,...(conditions.length ? {ConditionExpression:conditions.join(' AND ')} : {}),ExpressionAttributeValues:{':delta':delta,...(last ? {':one':1} : {}),...(memberDelta ? {':membersDelta':memberDelta} : {}),...(memberDelta<0 ? {':zero':0} : {}),...(limit!==undefined ? {':limit':limit} : {}),...(planId ? {':planId':planId} : {})}}};
+  };
   const transaction=TransactItems=>client.send(new TransactWriteCommand({TransactItems}));
   async function query(PK,prefix,field) {
     const results=[];let ExclusiveStartKey;
@@ -26,7 +32,23 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
     } while(ExclusiveStartKey);
     return results;
   }
+  async function ensureMemberCounter(org) {
+    const meta=await get(metaKey(org));
+    if(Number.isSafeInteger(meta?.memberCount) && meta.memberCount>=0) return meta;
+    const count=(await query(`ORG#${org}`,'MEMBER#','member')).length;
+    try {
+      const result=await client.send(new UpdateCommand({TableName:table,Key:metaKey(org),UpdateExpression:'SET memberCount = :count',ConditionExpression:'attribute_not_exists(memberCount)',ExpressionAttributeValues:{':count':count},ReturnValues:'ALL_NEW'}));
+      return {...meta,...result.Attributes,memberCount:count};
+    } catch(error) {
+      if(error.name!=='ConditionalCheckFailedException') throw error;
+      const current=await get(metaKey(org));
+      if(Number.isSafeInteger(current?.memberCount) && current.memberCount>=0) return current;
+      throw new HttpError(503,'USAGE_UNAVAILABLE','No pudimos comprobar el consumo de miembros.');
+    }
+  }
   const repository={
+    async plan(org){return planFor((await get(metaKey(org)))?.planId);},
+    async memberCount(org){return (await ensureMemberCounter(org)).memberCount;},
     async profile(subject){return (await get(profileKey(subject)))?.profile;},
     async initialize(subject,email,initial){
       if(initial.length>32) throw new HttpError(503,'MIGRATION_REQUIRED','La migración inicial necesita revisión del administrador.');
@@ -34,7 +56,9 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
       const actions=[put(profileKey(subject),{profile})];
       for(const input of initial) {
         const member={...input,subject,email};
-        actions.push(put(userKey(subject,member.organizationId),{member}),put(orgKey(member.organizationId,subject),{member}),counter(member.organizationId,member.role==='admin' ? 1 : 0));
+        await ensureMemberCounter(member.organizationId);
+        // Historical migration must retain access even above the default quota.
+        actions.push(put(userKey(subject,member.organizationId),{member}),put(orgKey(member.organizationId,subject),{member}),counter(member.organizationId,member.role==='admin' ? 1 : 0,false,1));
       }
       try {await transaction(actions);return true;}
       catch(error) {
@@ -47,6 +71,10 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
     async member(org,subject){return (await get(userKey(subject,org)))?.member;},
     async members(org){return query(`ORG#${org}`,'MEMBER#','member');},
     async createInvitation(invitation){
+      const meta=await ensureMemberCounter(invitation.organizationId);
+      const plan=await repository.plan(invitation.organizationId);
+      const metric=usageMetric(meta.memberCount,plan.limits.members);
+      if(!metric.remaining && !(await repository.members(invitation.organizationId)).some(member=>member.email===invitation.email)) throw quotaExceeded(metric);
       try {await transaction([put(inviteKey(invitation.tokenHash),{invitation}),caller(invitation.organizationId,invitation.createdBy)]);return invitation;}
       catch(error) {if(error.name!=='TransactionCanceledException') throw error;if((await repository.member(invitation.organizationId,invitation.createdBy))?.role!=='admin') throw noAccess();throw membershipConflict();}
     },
@@ -62,7 +90,13 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
       const next={...invitation,acceptedBy:subject,acceptedAt:now.toISOString()};
       const actions=[put(inviteKey(hash),{invitation:next},'attribute_not_exists(#invitation.acceptedBy) AND #invitation.email = :email AND #invitation.expiresAt > :now',{ExpressionAttributeNames:{'#invitation':'invitation'},ExpressionAttributeValues:{':email':email,':now':now.toISOString()}})];
       if(existing) actions.push({ConditionCheck:{TableName:table,Key:userKey(subject,member.organizationId),ConditionExpression:'#member.#role = :role',ExpressionAttributeNames:roleNames,ExpressionAttributeValues:{':role':existing.role}}});
-      else actions.push(put(userKey(subject,member.organizationId),{member}),put(orgKey(member.organizationId,subject),{member}),counter(member.organizationId,member.role==='admin' ? 1 : 0));
+      else {
+        const meta=await ensureMemberCounter(member.organizationId);
+        const plan=await repository.plan(member.organizationId);
+        const metric=usageMetric(meta.memberCount,plan.limits.members);
+        if(!metric.remaining) throw quotaExceeded(metric);
+        actions.push(put(userKey(subject,member.organizationId),{member}),put(orgKey(member.organizationId,subject),{member}),counter(member.organizationId,member.role==='admin' ? 1 : 0,false,1,plan.limits.members,plan.id));
+      }
       try {await transaction(actions);return member;}
       catch(error) {if(error.name!=='TransactionCanceledException') throw error;if(!retried) return repository.acceptInvitation(hash,subject,email,now,true);throw membershipConflict();}
     },
@@ -81,9 +115,10 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
     async removeMember(org,actor,subject){
       const existing=await repository.member(org,subject);if(!existing) throw notFound();
       if((await repository.member(org,actor))?.role!=='admin') throw noAccess();
+      await ensureMemberCounter(org);
       const actions=[userKey(subject,org),orgKey(org,subject)].map(Key=>({Delete:{TableName:table,Key,ConditionExpression:'#member.#role = :oldRole',ExpressionAttributeNames:roleNames,ExpressionAttributeValues:{':oldRole':existing.role}}}));
       if(actor!==subject) actions.push(caller(org,actor));
-      if(existing.role==='admin') actions.push(counter(org,-1,true));
+      actions.push(counter(org,existing.role==='admin' ? -1 : 0,existing.role==='admin',-1));
       try {await transaction(actions);}
       catch(error) {if(error.name!=='TransactionCanceledException') throw error;await explainMutationConflict(org,actor,existing,true);}
     },

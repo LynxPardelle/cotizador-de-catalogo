@@ -4,9 +4,9 @@
   "billingPeriod": "month",
   "taxesIncluded": false,
   "billingEnabled": false,
-  "limitsEnforced": false,
+  "limitsEnforced": true,
   "reviewedAt": "2026-11-19",
-  "notice": "Precios y límites propuestos, antes de impuestos. El piloto continúa sin cargos. Crear una cuenta no contrata una suscripción.",
+  "notice": "Precios propuestos, antes de impuestos. Los límites operativos se aplican en el piloto, que continúa sin cargos. Crear una cuenta no contrata una suscripción.",
   "plans": [
     {
       "id": "esencial",

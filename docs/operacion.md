@@ -82,7 +82,20 @@ Conservar artifacts y revisión validada de cada ambiente. Volver a desplegar un
 
 No se incluye facturación, exportación PDF, envío automático de invitaciones ni importación de catálogos grandes. Equipo, invitaciones manuales, selección entre organizaciones y migración inicial están implementados y su núcleo se comprobó en AWS y navegador. Esa aceptación técnica no completa el piloto comercial ni valida precios o demanda; las revisiones y sus comprobaciones se mantienen en [Verificación](verificacion.md).
 
-Esencial $399, Equipo $1,199 y Empresa $3,499 MXN/mes son precios propuestos antes de impuestos. Sus límites 2/2/100, 8/10/1,000 y 25/50/5,000 expresan miembros/catálogos activos/propuestas mensuales para contrastar con el piloto. `config/plans.json` mantiene estado `proposal`, sin cobros ni cuotas de pago activas. Crear una cuenta no contrata un plan y el piloto continúa sin cargos. Stripe queda pendiente.
+Esencial $399, Equipo $1,199 y Empresa $3,499 MXN/mes son precios propuestos antes de impuestos. Sus límites operativos 2/2/100, 8/10/1,000 y 25/50/5,000 expresan miembros/catálogos activos/propuestas mensuales y se aplican en backend. `services/shared/plans.json` mantiene `proposal`, `limitsEnforced: true` y `billingEnabled: false`. `/consumo` muestra uso, capacidades, avisos desde el 80% y reinicio mensual UTC. Crear una cuenta no contrata un plan y el piloto continúa sin cargos. Stripe queda pendiente.
+
+## Asignar un plan del piloto en desarrollo
+
+Los espacios nuevos usan Esencial. No existe una ruta pública ni una operación RPC para concederse Equipo o Empresa. El operador autorizado utiliza IAM y las guardas de `tools/plan-development.mjs`:
+
+```powershell
+node --use-system-ca tools/plan-development.mjs --show <organizationId>
+node --use-system-ca tools/plan-development.mjs --set <organizationId> equipo
+```
+
+Los únicos planes admitidos son esencial, equipo y empresa. El script comprueba cuenta 765932874577, región us-east-1, stack cotitrama-development completamente desplegado, tabla propia y organización existente con administrador. El cambio no crea una suscripción ni realiza cobros. Coordinar una ventana sin escrituras del equipo y esperar que terminen las solicitudes antes de cambiar el plan: Catálogos/Cotizaciones usan el plan que leyeron al autorizar cada petición. Una reducción conserva los datos y puede mostrar exceso; impide nuevo crecimiento en la dimensión agotada.
+
+Antes de activar contadores en un ambiente con usuarios anteriores, importar sus pertenencias Cognito pendientes, pausar escritores antiguos y drenar el timeout de Lambda antes del primer backfill. No inicializar consumo como cero si ya hay datos. En esta entrega se comprobó que development no tenía usuarios Cognito antes del despliegue. La inicialización de contadores usa lecturas fuertes paginadas y escritura condicional; no borrar ni reiniciar contadores para resolver un límite comercial. [Diseño y condiciones de activación](architecture/003-limites-y-consumo.md).
 
 ## Registro y recuperación
 

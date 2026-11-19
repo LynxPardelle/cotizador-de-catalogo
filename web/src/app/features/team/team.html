@@ -4,6 +4,7 @@
   @else if (auth.role !== 'admin') { <section class="empty-state"><h2>Consulta con un administrador</h2><p>Solo los administradores pueden invitar personas y gestionar el equipo de este espacio.</p></section> }
   @else {
     @if (store.error()) { <p class="notice error" role="alert">{{ store.error() }}</p> }
+    @if (store.errorCode() === 'PLAN_LIMIT_REACHED') { <p><a routerLink="/consumo">Ver consumo y capacidad del equipo →</a></p> }
     @if (store.message()) { <p class="notice success" role="status">{{ store.message() }}</p> }
     @if (store.busy()) { <p role="status" class="loading">Actualizando el equipo…</p> }
     <div class="team-layout"><section class="team-list" aria-labelledby="members-title"><div class="detail-heading"><h2 id="members-title">Miembros del espacio</h2><span class="muted">{{ store.members().length }} miembros</span></div>

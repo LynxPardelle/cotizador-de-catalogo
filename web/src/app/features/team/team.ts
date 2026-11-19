@@ -6,8 +6,9 @@ import { WorkspaceContext } from '../../core/workspace-context';
 import { MemberRole, roleLabel, TeamMember } from '../../data/team-api';
 import { MemberRow } from './member-row';
 import { TeamStore } from './team.store';
+import { RouterLink } from '@angular/router';
 
-@Component({ imports: [FormField, DatePipe, MemberRow], templateUrl: './team.html' })
+@Component({ imports: [FormField, DatePipe, MemberRow, RouterLink], templateUrl: './team.html' })
 export class Team {
   protected readonly auth = inject(Auth); protected readonly workspace = inject(WorkspaceContext); protected readonly store = inject(TeamStore);
   private readonly document = inject(DOCUMENT);

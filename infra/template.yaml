@@ -213,6 +213,12 @@ Resources:
             ApiId: !Ref ProductApi
             Path: /api/v1/team/context
             Method: GET
+        Usage:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/usage
+            Method: GET
         Members:
           Type: HttpApi
           Properties:
@@ -428,7 +434,7 @@ Resources:
                 Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt CatalogLogGroup.Arn
               - Effect: Allow
-                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:ConditionCheckItem]
+                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
                 Resource: !GetAtt CatalogTable.Arn
               - Effect: Allow
                 Action: lambda:InvokeFunction
@@ -453,6 +459,18 @@ Resources:
             ApiId: !Ref ProductApi
             Path: /api/v1/catalogs
             Method: GET
+        CatalogUsage:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/catalogs/usage
+            Method: GET
+        CatalogStatus:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/catalogs/{catalogId}/status
+            Method: PATCH
         GetCatalogVersion:
           Type: HttpApi
           Properties:
@@ -490,7 +508,7 @@ Resources:
                 Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt QuotesLogGroup.Arn
               - Effect: Allow
-                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:ConditionCheckItem]
+                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
                 Resource: !GetAtt QuotesTable.Arn
               - Effect: Allow
                 Action: lambda:InvokeFunction
@@ -516,6 +534,12 @@ Resources:
             ApiId: !Ref ProductApi
             Path: /api/v1/quotes/preview
             Method: POST
+        QuoteUsage:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/quotes/usage
+            Method: GET
         IssueQuote:
           Type: HttpApi
           Properties:

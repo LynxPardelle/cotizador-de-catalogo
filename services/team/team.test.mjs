@@ -6,6 +6,7 @@ import { createQuotingHandler } from '../quoting/index.mjs';
 import { createMemoryRepositories } from '../shared/memory.mjs';
 import { HttpError } from '../shared/errors.mjs';
 import { syntheticCatalog } from '../fixtures/catalog.mjs';
+import { planFor } from '../shared/quota.mjs';
 const teamModule=await import('./index.mjs').catch(()=>({}));
 const memoryModule=await import('./memory.mjs').catch(()=>({}));
 const a='11111111-1111-4111-8111-111111111111';
@@ -41,7 +42,7 @@ test('membership context uses server-side migration and supports an invited seco
   const selected=decode(await handler(event(b,'GET','/context',undefined,'org-a'))).body;
   assert.equal(selected.activeOrganizationId,'org-a');
   const auth=await handler({operation:'authorizeMembership',subject:b,organizationId:'org-a'});
-  assert.deepEqual(auth,{subject:b,organizationId:'org-a',role:'seller'});
+  assert.deepEqual(auth,{subject:b,organizationId:'org-a',role:'seller',plan:planFor()});
 });
 test('invitation persists only token hash, requires recipient email verification and has logical expiry',async()=>{
   const {handler,repository,userMap,advance}=setup();

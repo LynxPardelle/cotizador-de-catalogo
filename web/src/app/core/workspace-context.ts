@@ -14,6 +14,7 @@ export class WorkspaceContext {
   private generation = 0;
   readonly memberships = signal<Membership[]>([]);
   readonly activeOrganizationId = signal('');
+  readonly sessionVersion = signal(0);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly role = computed(() => this.memberships().find((membership) => membership.organizationId === this.activeOrganizationId())?.role ?? (this.config.settings().demo ? 'admin' : 'reader'));
@@ -41,6 +42,7 @@ export class WorkspaceContext {
     return true;
   }
   reset() {
+    this.sessionVersion.update((version) => version + 1);
     this.generation++; this.memberships.set([]); this.activeOrganizationId.set(''); this.busy.set(false); this.error.set('');
     if (this.config.browser) sessionStorage.removeItem(ORGANIZATION_KEY);
   }
