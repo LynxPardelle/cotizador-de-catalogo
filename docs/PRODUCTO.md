@@ -18,7 +18,7 @@ CotiTrama sustituye al nombre descriptivo Cotizador de Catálogo. Producción: `
 
 ## Piloto y modelo comercial
 
-La propuesta es una suscripción mensual por organización y equipo comercial. **Esencial: $399 MXN**, con 2 miembros, 2 catálogos activos y 100 propuestas emitidas por mes; **Equipo: $1,199 MXN**, con 8 miembros, 10 catálogos y 1,000 propuestas; **Empresa: $3,499 MXN**, con 25 miembros, 50 catálogos y 5,000 propuestas. Son precios y límites propuestos, antes de impuestos, pendientes de validar con el piloto. La fuente compartida es [`services/shared/plans.json`](../services/shared/plans.json).
+La propuesta es una suscripción mensual por organización y equipo comercial. **Esencial: $399 MXN**, con 2 miembros, 2 catálogos activos y 100 propuestas emitidas por mes; **Equipo: $1,199 MXN**, con 8 miembros, 10 catálogos y 1,000 propuestas; **Empresa: $3,499 MXN**, con 25 miembros, 50 catálogos y 5,000 propuestas. Los precios siguen propuestos antes de impuestos; las capacidades se aplican durante el piloto y se contrastarán con su uso real. La fuente compartida es [`services/shared/plans.json`](../services/shared/plans.json).
 
 Los planes están en preparación. El piloto continúa sin cargos; crear una cuenta no activa una suscripción. La contratación automática y Stripe quedan pendientes. La [propuesta comercial detallada](planes-suscripcion.md) distingue capacidades actuales, ampliaciones y controles necesarios, además de referencias de mercado y escenarios de costo con supuestos explícitos.
 
