@@ -98,7 +98,12 @@ describe('CotiTrama', () => {
     const team = { invitation: async () => ({ invitation: { organizationId: 'joined-org', email: 'person@example.com', role: 'seller', expiresAt: '2099-01-01T00:00:00Z' } }), accept };
     TestBed.configureTestingModule({ providers: [provideRouter(routes), provideHttpClient(), { provide: Auth, useValue: { available: true, role: 'seller', busy: () => false, error: () => '', logout: vi.fn() } }, { provide: TeamApi, useValue: team }, { provide: CatalogApi, useValue: { list: async () => ({ catalogs: [] }) } }] });
     const workspace = TestBed.inject(WorkspaceContext);
-    const load = vi.spyOn(workspace, 'load').mockResolvedValue();
+    workspace.memberships.set([{ organizationId: 'own-org', role: 'admin' }]);
+    workspace.activeOrganizationId.set('own-org');
+    const load = vi.spyOn(workspace, 'load').mockImplementation(async (preferred) => {
+      workspace.memberships.set([{ organizationId: 'own-org', role: 'admin' }, { organizationId: 'joined-org', role: 'seller' }]);
+      workspace.activeOrganizationId.set(preferred!);
+    });
     const harness = await RouterTestingHarness.create('/invitacion/recipient-only-token');
     await harness.fixture.whenStable();
     const page = harness.routeNativeElement!;
@@ -109,6 +114,10 @@ describe('CotiTrama', () => {
     expect(accept).toHaveBeenCalledWith('recipient-only-token');
     expect(load).toHaveBeenCalledWith('joined-org');
     expect(TestBed.inject(Router).url).toBe('/cotizar');
+    const selector = harness.routeNativeElement!.querySelector<HTMLSelectElement>('#active-workspace')!;
+    expect([...selector.options].map((option) => option.value)).toEqual(['own-org', 'joined-org']);
+    expect(selector.value).toBe('joined-org');
+    expect(selector.selectedOptions[0].textContent).toContain('Vendedor');
   });
 
   it('explains an expired invitation without showing an acceptance action', async () => {

@@ -65,7 +65,19 @@ async function main() {
       state.group = groups.Groups[0].GroupName;
       state.organizationId = state.group.split(':')[1];
       await save(privateFile, state);
-      await save(reportFile, { ...(await json(reportFile)), emailReceived: true, confirmed: true, statusAfter: confirmed.UserStatus, emailVerified: true, organizationAssigned: true, confirmedAt: new Date().toISOString(), method: 'Real SignUp, Gmail receipt, real confirmation code and Cognito PostConfirmation.' });
+      const { stdout: resourceJson } = await promisify(execFile)(process.platform === 'win32' ? 'aws.exe' : 'aws',
+        ['cloudformation', 'describe-stack-resource', '--stack-name', stackName, '--logical-resource-id', 'MembersTable', '--region', region, '--output', 'json', '--no-cli-pager']);
+      const table = JSON.parse(resourceJson).StackResourceDetail.PhysicalResourceId;
+      assert.ok(table.startsWith(`${stackName}-MembersTable-`));
+      const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+      const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
+      const database = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
+      try {
+        const result = await database.send(new GetCommand({ TableName: table, Key: { PK: `USER#${state.sub}`, SK: `ORG#${state.organizationId}` }, ConsistentRead: true }));
+        assert.equal(result.Item?.member?.role, 'admin', 'PostConfirmation must create the owner in the identity database.');
+        assert.equal(result.Item.member.email, state.email);
+      } finally { database.destroy(); }
+      await save(reportFile, { ...(await json(reportFile)), emailReceived: true, confirmed: true, statusAfter: confirmed.UserStatus, emailVerified: true, organizationAssigned: true, ownerMembershipPersisted: true, confirmedAt: new Date().toISOString(), method: 'Real SignUp, Gmail receipt, real confirmation code and Cognito PostConfirmation plus a strongly consistent DynamoDB membership read.' });
       await unlink(codeFile);
       console.log('Real email confirmation passed; verified account and organization assigned.');
     } else {
