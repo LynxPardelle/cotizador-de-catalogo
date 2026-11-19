@@ -1,0 +1,35 @@
+<main class="workspace">
+  <div class="page-heading"><div><p class="eyebrow">Área comercial</p><h1>Nueva cotización</h1><p class="lede">Configura un producto y revisa sus reglas antes de guardar la propuesta.</p></div><a class="text-link" routerLink="/catalogos">Ver catálogos <span aria-hidden="true">↗</span></a></div>
+  @if (!auth.available) {
+    <section class="empty-state"><h2>Tu espacio de cotizaciones</h2><p>Inicia sesión para consultar los catálogos de tu organización.</p><button type="button" (click)="auth.login('/cotizar')">Iniciar sesión</button></section>
+  } @else {
+    @if (store.error()) { <p class="notice error" role="alert">{{ store.error() }}</p> }
+    @if (store.busy()) { <p class="loading" role="status">Procesando la cotización…</p> }
+    @if (!store.catalogs().length && !store.busy()) { <section class="empty-state"><h2>Aún no hay catálogos publicados</h2><p>Publica la primera versión para empezar a cotizar.</p><a class="button" routerLink="/catalogos">Ir a catálogos</a><button class="text-button" type="button" (click)="load()">Volver a cargar</button></section> }
+    @if (catalog(); as catalog) {
+      <div class="quote-layout">
+        <section class="configuration" aria-labelledby="config-title"><div class="section-label">01 · Configuración</div><h2 id="config-title">Productos y opciones</h2>
+          <form (submit)="calculate($event)">
+            <label for="catalog">Catálogo publicado</label><select id="catalog" [value]="catalog.catalogId" (change)="chooseCatalog($any($event.target).value)" [disabled]="store.busy()">@for (item of store.catalogs(); track item.catalogId) { <option [value]="item.catalogId">{{ item.name }} · v{{ item.version }}</option> }</select>
+            <label for="product">Producto</label><select id="product" [value]="model().productId" (change)="chooseProduct($any($event.target).value)" [disabled]="store.busy()">@for (item of catalog.products; track item.id) { <option [value]="item.id">{{ item.name }}</option> }</select>
+            <div class="quantity-row"><div><label for="quantity">Cantidad</label><input id="quantity" type="number" step="1" [formField]="fields.quantity" aria-describedby="quantity-help"></div><p id="quantity-help" class="muted">Unidades enteras, de 1 a 10,000.<br>Las reglas se calculan al revisar.</p></div>
+            @if (product(); as product) {
+              <p class="base-price">Precio base <strong>{{ product.basePriceMinor | money:catalog.currency:catalog.currencyExponent }}</strong></p>
+              @if (product.options.length) { <fieldset><legend>Opciones adicionales</legend>@for (option of product.options; track option.id; let i = $index) { <label class="check-row"><input type="checkbox" [formField]="fields.options[i].selected"><span>{{ option.name }}</span><span class="muted">+ {{ option.priceMinor | money:catalog.currency:catalog.currencyExponent }}</span></label> }</fieldset> }
+            }
+            <button class="full-width" type="submit" [disabled]="store.busy() || fields().invalid() || auth.role === 'reader'">Revisar desglose <span aria-hidden="true">→</span></button>
+            @if (auth.role === 'reader') { <p class="muted">Tu cuenta puede consultar propuestas. Solicita acceso comercial para emitirlas.</p> }
+          </form>
+        </section>
+        <section class="proposal-panel" aria-labelledby="preview-title"><div class="section-label">02 · Revisión</div>
+          @if (store.preview(); as preview) {
+            <app-breakdown [value]="preview" />
+            @if (store.expired()) { <p class="notice error" role="alert">Este catálogo ha vencido. Elige una versión vigente.</p> }
+            @if (store.quote(); as quote) { <div class="notice success" role="status"><strong>Propuesta guardada</strong><p>Conservamos el desglose y la versión que acabas de confirmar.</p><a [routerLink]="['/propuestas', quote.quoteId]">Abrir propuesta {{ quote.quoteId }}</a></div> }
+            @else { <p class="muted snapshot-note">Al guardar se conserva esta versión de precios, moneda y reglas.</p><button type="button" class="full-width" [disabled]="store.busy() || store.expired()" (click)="store.issue()">Confirmar y guardar propuesta</button> }
+          } @else { <div class="preview-empty"><span class="document-mark" aria-hidden="true">≡</span><h2 id="preview-title">Tu propuesta empieza aquí</h2><p>Revisa el desglose para ver los importes y las reglas aplicadas a esta configuración.</p><div class="preview-lines" aria-hidden="true"><span></span><span></span><span></span></div></div> }
+        </section>
+      </div>
+    }
+  }
+</main>

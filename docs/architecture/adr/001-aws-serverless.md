@@ -1,13 +1,11 @@
-# AWS Lambda para los servicios de dominio
+# AWS Lambda para frontend y microservicios de CotiTrama
 
-**Estado** Aceptada para la base.
+Estado: aceptada; ampliada el 19 de noviembre de 2026 para incluir el frontend Angular SSR solicitado.
 
-El servicio de Catálogos es dueño de publicación y revisiones. Cotizaciones lee una revisión publicada por un contrato de lectura. Puede iniciar con ambos Lambdas en un stack y tablas separadas. La cotización se calcula de forma síncrona en una Lambda con operaciones acotadas. El cálculo usa enteros en unidades monetarias menores y decisiones explícitas de redondeo. El piloto acepta cantidades enteras. Cada revisión se valida antes de publicar. Un fallo al emitir permite reintentar con la misma clave de idempotencia. Si la clave llega con otro contenido, el API devuelve conflicto.
+Web, Catálogos, Cotizaciones y Salud son funciones Lambda Node.js 24 arm64. Angular SSR usa Express y serverless-http; CloudFront accede a su Function URL con IAM y OAC. Las rutas de negocio usan otro origen HTTP API con JWT de Cognito. Cada dominio tiene tabla y rol separados. Cotizaciones lee catálogos mediante un contrato de invocación; no accede a su tabla.
 
-Las funciones escalan por invocación y permiten publicar contratos separados a medida que se desarrollan los dominios. DynamoDB bajo demanda se ajusta a solicitudes variables. Los recursos se describen con SAM para reproducir la configuración y revisar permisos. Se consideró un servicio en contenedor cuando hay trabajo sostenido o bibliotecas con dependencias pesadas. La carga prevista del piloto es intermitente y se ajusta a Lambdas breves.
+SAM describe infraestructura reproducible por ambiente. DynamoDB bajo demanda se ajusta a solicitudes variables; las propuestas conservan snapshots y las emisiones usan transacciones condicionales. El cálculo interactivo es síncrono y usa aritmética entera.
 
-Añadir una Lambda con SQS para exportación de documentos cuando se necesite entrega asíncrona y reintentos. Step Functions Standard queda reservado para importaciones largas con validación, publicación por etapas y seguimiento de ejecución. El cálculo interactivo permanece síncrono.
+Se descarta una SPA exclusivamente en S3 para cumplir el hosting en Lambda solicitado. Un servicio siempre activo queda reservado para cargas sostenidas. SQS se podrá añadir para documentos asíncronos y Step Functions para importaciones largas cuando existan esos requisitos.
 
-- [Runtime Node.js en Lambda](https://docs.aws.amazon.com/lambda/latest/dg/lambda-nodejs.html)
-- [DynamoDB bajo demanda](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/on-demand-capacity-mode.html)
-- [Flujos de AWS Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/choosing-workflow-type.html)
+[Arquitectura](../ARCHITECTURE.md) · [Diseño de producto](../002-cotitrama-producto.md)

@@ -1,87 +1,77 @@
 ---
-goal: Primera versión de Cotizador de Catálogo
-version: '1.0'
+goal: Primera versión de CotiTrama
+version: '1.2'
 date_created: 2026-11-17
-status: 'Planned'
-tags: [feature, architecture]
+date_updated: 2026-11-19
+status: 'In Progress'
+tags: [feature, microservices, aws, angular, ssr]
 ---
 
-# Introduction
+# Primera versión de CotiTrama
 
-Estado **Planned**. Este plan convierte el esqueleto en el flujo de generación de propuestas a partir de catálogos y reglas comerciales versionadas. Las fases se ejecutan en orden.
+El producto pasa de una base de salud a un flujo comercial reproducible. Se mantiene el identificador histórico del repositorio para continuidad remota. [Diseño y nombre](../docs/architecture/002-cotitrama-producto.md).
 
-## 1. Requirements & Constraints
+## Requisitos y límites
 
-- **REQ-001** El piloto completa el flujo descrito en [Producto](../docs/PRODUCTO.md).
-- **SEC-001** Cada operación de negocio valida identidad, organización y acceso al recurso. Los ejemplos del repositorio usan datos sintéticos.
-- **CON-001** Las escrituras repetidas conservan el resultado original o devuelven conflicto cuando cambia la solicitud.
-- **PAT-001** El frontend usa componentes standalone, rutas lazy y SignalStore por flujo. El cómputo del backend se cobra por uso.
+- **REQ-001** Publicar catálogo v1 → configurar → revisar desglose → emitir → publicar v2 → reabrir propuesta original sin cambios.
+- **REQ-002** Arquitectura de microservicios en AWS: Web SSR, Catálogos, Cotizaciones y Salud en Lambdas separadas. Tablas y roles por dominio; comunicación mediante contratos.
+- **REQ-003** Frontend Angular standalone, rutas lazy, SignalStore por flujo y HttpClient tipado, servido por Lambda mediante Angular SSR/Express/serverless-http. CloudFront OAC/IAM protege el origen Web.
+- **REQ-004** Subdominios de lynxpardelle.com: cotitrama-dev, cotitrama-test y cotitrama para development, testing y production. DNS/TLS por infraestructura; no modificar nameservers ni aliases del portafolio.
+- **SEC-001** Cognito Authorization Code + PKCE; JWT verificado por API Gateway. Cada servicio valida identidad, organización y rol firmados. Accesos cruzados devuelven 404. Demo sólo local y sintética.
+- **CON-001** Revisiones y snapshots inmutables, emisión idempotente y conflicto al cambiar el contenido de una clave ya usada.
+- **CON-002** Importes BigInt serializados como cadenas de unidades menores, cantidades enteras, reglas/moneda/redondeo explícitos. Backend decide los importes.
+- **OPS-001** Toda elevación sigue development → testing → main. Cambios locales no son promoción ni despliegue.
 
-## 2. Implementation Steps
+## Implementación
 
-### Implementation Phase 1
+| Tarea | Alcance | Estado |
+| --- | --- | --- |
+| **TASK-001** Motor de reglas | `services/quoting/domain/price.mjs`: validación de revisiones, opciones/cantidades, prioridad, descuentos/recargos y redondeo. Casos sintéticos, límites e invariantes monetarias. | Verificada localmente (19/11/2026) |
+| **TASK-002** Catálogos y Cotizaciones | Handlers HTTP, repositorios de memoria/AWS, tablas independientes, contrato de lectura IAM, publicación condicional, snapshots e idempotencia transaccional. Pruebas de roles, aislamiento y reintentos. | Implementada y verificada localmente; aceptación AWS pendiente |
+| **TASK-003** Flujo Angular y sesión | Catálogos, configuración, preview, emisión y reapertura; estados de carga/error/vigencia. PKCE, sesión expirable y roles UI. SSR y paquete Lambda con invocación local. | Verificada localmente (19/11/2026) |
+| **TASK-004** Piloto sintético | Catálogo de oficina con opciones, incompatibilidades y volumen; servidor demo loopback y carga pequeña reproducible con informe. | Piloto sintético verificado; piloto comercial pendiente |
+| **TASK-005** Microservicios y dominio en nube | SAM completo, Cognito, IAM mínimo, logs/retención, DynamoDB, CloudFront OAC y Route 53. Lint y CI. Despliegue development, smoke JWT/DDB/DNS y luego promociones. | SAM build, paquete y plantilla validados localmente; despliegue pendiente |
+| **TASK-006** Piloto autorizado | Usuarios de prueba y catálogo del primer sector autorizados. Medir minutos/cotización, correcciones, reutilización de reglas y latencia AWS. Alarmas y presupuesto del ambiente. | Pendiente |
 
-**GOAL-001** Reglas del producto
+Las pruebas locales permiten continuar autónomamente las primeras tareas. TASK-002 y TASK-005 no quedan aceptadas en nube hasta comprobar los servicios administrados en development. TASK-006 requiere evidencia real; un catálogo sintético no valida demanda ni ahorro comercial.
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-001 | Crear un motor puro bajo services/quoting/domain/price.mjs. Recibe catálogo versionado, moneda, cantidades y opciones validadas. Devuelve importes menores serializados como cadenas, versión exacta y explicación ordenada de reglas. Verificación. Casos sintéticos verifican importes, prioridad, redondeo, monedas y rechazo de opciones y revisiones inválidas. | Pendiente | |
+## Ampliación autorizada: sitio, registro y suscripciones
 
-### Implementation Phase 2
+- **TASK-007** Landing pública SSR, registro Cognito con PKCE y verificación de correo, organización propia por cuenta confirmada e idempotencia del alta. En verificación.
+- **TASK-008** Diseño de tiers Esencial/Equipo/Empresa según capacidades existentes y ampliaciones; precios por definir. [Matriz comercial](../docs/planes-suscripcion.md). Stripe permanece pendiente por instrucción del usuario.
+- **TASK-009** Incorporar el trabajo en development, commit/push, validar CI y desplegar exclusivamente development. Ejecutar el flujo comercial con Cognito/HTTP API/DynamoDB y la URL pública, comprobar aislamiento y preservar los otros proyectos. En curso.
 
-**GOAL-002** Catálogo y publicación
+## Verificación y evidencia
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-002 | Agregar servicios services/catalog y services/quoting al template con HTTP API v2 y autorizador JWT. Crear tablas bajo demanda, publicador condicional e idempotencia de emisión por organización. Verificación. Una revisión publicada es inmutable. Repetir la misma emisión conserva un solo id. Accesos cruzados devuelven 404. | Pendiente | |
+- **TEST-001** Motor puro: importes, moneda/exponente, revisión exacta, redondeo, incompatibilidad, caducidad, límites y prioridad estable.
+- **TEST-002** Flujo de handlers: publicación v1, preview, emisión, actualización v2 y snapshot intacto; reintentos concurrentes, conflictos, roles y organizaciones.
+- **TEST-003** Pruebas de UI/servicios Angular, compilación browser/server e invocación del adaptador Lambda empaquetado para rutas profundas y configuración sin caché.
+- **TEST-004** Lint CloudFormation/SAM, contrato IAM por servicio y CI sin despliegues. Validación de controles de promoción existentes.
+- **TEST-005** Informe `artifacts/pilot-local.json`: carga sintética reproducible, con límites y métricas comerciales explícitamente pendientes.
+- **TEST-006** Aceptación AWS descrita en [Operación](../docs/operacion.md): Cognito/PKCE, JWT, transacciones DynamoDB reales, OAC, DNS/TLS, logs, latencia, aislamiento y permisos.
 
-### Implementation Phase 3
+Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm run smoke:ssr`, `npm run pilot`, `cfn-lint infra/template.yaml`. Los resultados observados y las limitaciones se registran en [Verificación](../docs/verificacion.md).
 
-**GOAL-003** Flujo comercial Angular
+## Recursos y entrega
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-003 | Agregar rutas de catálogo y cotización bajo web/src/app/features, usar un SignalStore por flujo y HttpClient tipado. Renderizar desglose y versión de catálogo con estados de carga, error y expiración. Verificación. El usuario emite una cotización de prueba y puede abrirla después de publicar otra versión. El total original coincide. | Pendiente | |
+| Recurso | Ubicación |
+| --- | --- |
+| Infraestructura serverless | `infra/template.yaml` |
+| Catálogos y propuestas | `services/catalog/`, `services/quoting/` |
+| Contratos, auth y adaptadores | `services/shared/` |
+| Datos sintéticos | `services/fixtures/catalog.mjs` |
+| Angular por flujo | `web/src/app/features/` |
+| Sesión y contratos frontend | `web/src/app/core/`, `web/src/app/data/` |
+| Angular SSR | `web/src/server.ts`, `tools/package-web.mjs` |
+| Demo y piloto | `tools/demo.mjs`, `tools/pilot.mjs` |
+| CI | `.github/workflows/ci.yml` |
 
-### Implementation Phase 4
+Se conserva Node.js 24, Angular 22 y NgRx Signals 22; los lockfiles fijan las dependencias. El hosting replica el patrón SSR del portafolio sin reutilizar sus stacks, pool de identidad ni dominios principales.
 
-**GOAL-004** Piloto de catálogo
+## Fuera del primer flujo
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-004 | Definir un catálogo sintético que cubra las reglas del primer sector. Correr pruebas de carga pequeñas y medir tiempo de cotización con datos autorizados del piloto. Verificación. Hay un conjunto reproducible de propuestas y se registran latencia, correcciones y reglas reutilizables. | Pendiente | |
+No se incluyen cobros/licencias automáticas, exportación PDF, importaciones largas, invitaciones de equipo ni multi-organización seleccionable. SQS para documentos y Step Functions para importaciones se incorporarán al existir esos requisitos. El primer piloto opera una moneda por catálogo y cantidades enteras.
 
-## 3. Alternatives
+## Primer pendiente para continuar desde remoto
 
-- **ALT-001** Contenedor siempre activo. Reservarlo para procesamiento que requiera recursos sostenidos durante la jornada.
-- **ALT-002** Orquestación de cada operación con Step Functions. Usarla cuando el historial de etapas y la recuperación independiente aporten valor a un proceso largo.
-
-## 4. Dependencies
-
-- **DEP-001** Angular y NgRx Signals según el lock de `web/`.
-- **DEP-002** Node.js 24, AWS SAM, API Gateway y DynamoDB bajo demanda para los servicios del piloto.
-
-## 5. Files
-
-- **FILE-001** `infra/template.yaml` incorpora rutas autorizadas y tablas por servicio.
-- **FILE-002** `services/` contiene dominios y adaptadores Lambda, con pruebas de operaciones e idempotencia.
-- **FILE-003** `web/src/app/features/` contiene rutas, estado y pantallas de cada flujo.
-
-## 6. Testing
-
-- **TEST-001** Pruebas unitarias de reglas, invariantes monetarias e idempotencia con fixtures sintéticos.
-- **TEST-002** Pruebas de integración de segregación por organización, datos y operación de extremo a extremo en entorno de pruebas.
-- **TEST-003** Verificación de compilación y pruebas Angular, `node --test` de handlers y lint de SAM.
-
-## 7. Risks & Assumptions
-
-- **RISK-001** Errores de importe o repetición. Verificar operaciones con aritmética entera, validación de moneda y escrituras condicionales.
-- **ASSUMPTION-001** Cada organización piloto aporta un escenario y datos de prueba autorizados. El despliegue y la operación se revisan después de comprobar el flujo local.
-
-## 8. Related Specifications / Further Reading
-
-- [Producto](../docs/PRODUCTO.md)
-- [Arquitectura](../docs/architecture/ARCHITECTURE.md)
-- [Runtime Node.js en Lambda](https://docs.aws.amazon.com/lambda/latest/dg/lambda-nodejs.html)
-- [DynamoDB bajo demanda](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/on-demand-capacity-mode.html)
-- [Flujos de AWS Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/choosing-workflow-type.html)
+Incorporar los cambios locales actuales en development conservando el trabajo y completar la aceptación con recursos AWS y usuarios autorizados. Después, medir el piloto y promover mediante PR development → testing → main. Consultar [Verificación](../docs/verificacion.md) para distinguir lo comprobado localmente de lo pendiente en nube.

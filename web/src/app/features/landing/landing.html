@@ -1,0 +1,55 @@
+<div class="landing">
+  <a class="skip-link" href="#inicio">Ir al contenido</a>
+  <header class="landing-header">
+    <a routerLink="/" class="brand" aria-label="CotiTrama, inicio"><span class="brand-mark" aria-hidden="true">ct</span>CotiTrama</a>
+    <nav aria-label="Principal"><a href="#como-funciona">Cómo funciona</a><a href="#planes">Planes</a><a href="#preguntas">Preguntas</a></nav>
+    <div class="landing-account">
+      @if (auth.available) { <a routerLink="/cotizar" class="button compact">Abrir mi espacio <span aria-hidden="true">↗</span></a> }
+      @else { <button class="text-button" type="button" [disabled]="auth.busy()" (click)="auth.login()">Iniciar sesión</button><button type="button" class="compact" [disabled]="auth.busy()" (click)="auth.signup('/catalogos')">Crear cuenta</button> }
+    </div>
+  </header>
+  @if (config.error()) { <p class="notice error landing-notice" role="alert">{{ config.error() }}</p> }
+  @if (auth.error()) { <p class="notice error landing-notice" role="alert">{{ auth.error() }}</p> }
+  <main>
+    <section class="landing-hero" id="inicio" aria-labelledby="hero-title">
+      <div class="landing-width hero-composition">
+        <div class="hero-copy"><p class="landing-kicker">CotiTrama · Del catálogo al acuerdo</p><h1 id="hero-title">Cotiza con reglas claras.<br><span>Conserva cada acuerdo.</span></h1><p class="hero-description">Tus productos, opciones y descuentos en una propuesta que conserva el precio y la versión que confirmaste.</p>
+          <div class="hero-actions">
+            @if (auth.available) { <a class="button" routerLink="/cotizar">Ir a mis cotizaciones <span aria-hidden="true">→</span></a> }
+            @else { <button type="button" data-testid="hero-signup" [disabled]="auth.busy()" (click)="auth.signup('/catalogos')">Crear cuenta <span aria-hidden="true">→</span></button> }
+            <a href="#como-funciona">Ver cómo funciona <span aria-hidden="true">↓</span></a>
+          </div>
+          <p class="hero-footnote">Piloto disponible. Planes comerciales en preparación.</p>
+          @if (config.settings().demo) { <a class="demo-link" routerLink="/cotizar" data-testid="explore-demo">Explorar demostración con datos sintéticos ↗</a> }
+        </div>
+        <figure class="proposal-visual" aria-labelledby="example-caption">
+          <div class="proposal-sheet">
+            <div class="sheet-top"><span class="sheet-wordmark">CotiTrama</span><span class="sheet-status">Propuesta guardada</span></div>
+            <div class="sheet-heading"><p>ESPACIOS DE TRABAJO</p><h2>Una configuración.<br>Un precio que permanece.</h2><span class="sheet-version">Catálogo oficina / Versión 1</span></div>
+            <div class="sheet-product"><div><strong>Escritorio modular</strong><span>Acabado roble · 5 unidades</span></div><strong>26,500.00</strong></div>
+            <div class="sheet-rule"><span>Descuento por volumen · 5%</span><span>−1,325.00</span></div>
+            <div class="sheet-total"><span>Total de la propuesta</span><strong>25,175<span>.00 MXN</span></strong></div>
+            <div class="sheet-seal"><span aria-hidden="true">✓</span><p>Versión y reglas conservadas<br><strong>Incluso cuando tu catálogo cambie.</strong></p></div>
+          </div>
+          <figcaption id="example-caption">Ejemplo ilustrativo con datos sintéticos.</figcaption>
+        </figure>
+      </div>
+      <div class="hero-baseline landing-width"><span>Catálogos versionados</span><span>Reglas explicadas</span><span>Propuestas reproducibles</span></div>
+    </section>
+
+    <section class="landing-width landing-problem" aria-labelledby="problem-title"><p class="landing-kicker">Menos dudas entre el precio y la propuesta</p><div class="problem-layout"><h2 id="problem-title">Que una nueva lista de precios<br>no cambie un acuerdo anterior.</h2><div><p>Entre productos, opciones y descuentos, una cotización necesita más que un total. Necesita dejar claro cómo se obtuvo.</p><p>CotiTrama conecta la configuración con una versión publicada del catálogo y guarda ese contexto al confirmar la propuesta.</p></div></div></section>
+
+    <section class="landing-workflow" id="como-funciona" aria-labelledby="workflow-title"><div class="landing-width"><div class="section-intro"><div><p class="landing-kicker">Un flujo de principio a fin</p><h2 id="workflow-title">Del catálogo a la propuesta,<br>sin perder el hilo.</h2></div><p>Publica, configura y revisa.<br>El resultado queda ligado a su versión.</p></div>
+      <ol class="workflow-steps"><li><span class="step-number">01</span><h3>Publica tu catálogo</h3><p>Define productos, opciones y reglas de precio. Cada publicación crea una versión que permanece intacta.</p></li><li><span class="step-number">02</span><h3>Configura y revisa</h3><p>Elige cantidades y opciones compatibles. Consulta el desglose y los descuentos o recargos aplicados.</p></li><li><span class="step-number">03</span><h3>Confirma y conserva</h3><p>Guarda la propuesta y vuelve a abrirla después. Una nueva versión del catálogo conserva el resultado anterior.</p></li></ol>
+    </div></section>
+
+    <section class="landing-width product-detail" aria-labelledby="detail-title"><div class="product-detail-copy"><p class="landing-kicker">El contexto también forma parte del precio</p><h2 id="detail-title">Un desglose que puedes<br>volver a explicar.</h2><p>Moneda, cantidades, opciones y reglas aplicadas acompañan a cada propuesta guardada. Tu equipo puede consultar la versión con la que se emitió.</p><ul><li>Importes calculados con reglas explícitas.</li><li>Opciones y precios de la versión original.</li><li>Datos separados por organización.</li></ul><a href="#empezar" class="text-link">Empieza con tu primer catálogo →</a></div><div class="version-visual" aria-label="Ejemplo del catálogo actualizado y la propuesta original"><div class="version-row"><span class="version-index">v1</span><div><strong>Propuesta confirmada</strong><span>El catálogo y las reglas originales se conservan.</span></div><span class="version-check" aria-hidden="true">✓</span></div><div class="version-connector" aria-hidden="true"></div><div class="version-row version-row-new"><span class="version-index">v2</span><div><strong>Tu catálogo evoluciona</strong><span>Los nuevos precios se usan en nuevas propuestas.</span></div><span aria-hidden="true">↗</span></div><p>El cambio de hoy no reescribe la propuesta de ayer.</p></div></section>
+
+    <section class="landing-plans" id="planes" aria-labelledby="plans-title"><div class="landing-width"><div class="section-intro"><div><p class="landing-kicker">Planes en preparación</p><h2 id="plans-title">Un punto de partida<br>para cada equipo.</h2></div><p>Precios y límites en validación.<br>La contratación y los cobros aún no están habilitados.</p></div><div class="plan-grid">@for (plan of plans; track plan.name) { <article class="plan" [class.plan-primary]="plan.primary"><p class="plan-name">{{ plan.name }}</p><h3>{{ plan.audience }}</h3><p class="plan-description">{{ plan.description }}</p><p class="plan-price">Precio por definir</p><ul>@for (feature of plan.features; track feature) { <li>{{ feature }}</li> }</ul><p class="plan-next">{{ plan.next }}</p>@if (plan.primary) { @if (auth.available) { <a class="button" routerLink="/catalogos">Abrir mis catálogos →</a> } @else { <button type="button" [disabled]="auth.busy()" (click)="auth.signup('/catalogos')">Crear cuenta para el piloto →</button> } } @else { <a href="#empezar" class="text-link">Conocer el alcance del piloto →</a> }</article> }</div><p class="plans-note">Estas opciones son una propuesta comercial en validación. Crear una cuenta no contrata un plan ni activa funciones futuras. Los roles existen; la gestión de miembros desde la aplicación sigue pendiente.</p></div></section>
+
+    <section class="landing-width landing-faq" id="preguntas" aria-labelledby="faq-title"><div><p class="landing-kicker">Antes de empezar</p><h2 id="faq-title">Las preguntas<br>que sí importan.</h2></div><div class="faq-list">@for (faq of faqs; track faq.question) { <details><summary>{{ faq.question }}<span aria-hidden="true">+</span></summary><p>{{ faq.answer }}</p></details> }</div></section>
+
+    <section class="landing-start" id="empezar" aria-labelledby="start-title"><div class="landing-width"><p class="landing-kicker">Tu próximo catálogo puede empezar aquí</p><h2 id="start-title">Haz que cada propuesta<br>conserve su historia.</h2><p>Crea tu cuenta y recorre el piloto con un catálogo sintético antes de preparar el tuyo.</p>@if (auth.available) { <a class="button" routerLink="/catalogos">Abrir mis catálogos →</a> } @else { <button type="button" [disabled]="auth.busy()" (click)="auth.signup('/catalogos')">Crear cuenta →</button> }<span class="start-note">Sin contratación ni cobros en línea habilitados.</span></div></section>
+  </main>
+  <footer class="landing-footer landing-width"><a routerLink="/" class="brand"><span class="brand-mark" aria-hidden="true">ct</span>CotiTrama</a><p>Catálogos versionados.<br>Propuestas reproducibles.</p><div><a href="#como-funciona">Cómo funciona</a><a href="#planes">Planes</a><button class="text-button" type="button" (click)="auth.login()">Iniciar sesión</button></div><span>Un producto de Lynx Pardelle.</span></footer>
+</div>

@@ -1,8 +1,10 @@
 flowchart LR
-    Staff["Operador Angular"] --> Api["HTTP API"]
-    Api --> Health["Lambda de salud"]
-    Api -.-> Identity["Validación JWT"]
-    Api -.-> DomainA["Catálogos | Lambda"]
-    Api -.-> DomainB["Cotizaciones | Lambda"]
-    DomainA -.-> StoreA["DynamoDB bajo demanda"]
-    DomainB -.-> StoreB["DynamoDB bajo demanda"]
+  Browser[Angular] --> CDN[CloudFront / TLS / Route53]
+  CDN -->|OAC IAM| Web[Lambda Angular SSR]
+  CDN -->|/api/*| Api[HTTP API JWT Cognito]
+  Api --> Catalog[Lambda Catálogos]
+  Api --> Quote[Lambda Cotizaciones]
+  Api --> Health[Lambda Salud]
+  Catalog --> CDB[(DynamoDB Catálogos)]
+  Quote --> QDB[(DynamoDB Propuestas)]
+  Quote -->|Invoke IAM lectura publicada| Catalog

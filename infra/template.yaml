@@ -1,45 +1,648 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Base de AWS Lambda para Cotizador de Catálogo.
+Description: CotiTrama - Angular SSR y microservicios de catalogos y cotizaciones.
 
 Parameters:
   Stage:
     Type: String
-    Default: dev
-    AllowedValues: [dev, test, prod]
+    Default: development
+    AllowedValues: [development, testing, production]
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Zona publica existente de lynxpardelle.com. No modifica su delegacion.
+  CertificateArn:
+    Type: String
+    AllowedPattern: '^arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-f0-9-]+$'
+    Description: Certificado ACM en us-east-1 que cubra el subdominio del ambiente.
+  PilotOrganizationId:
+    Type: String
+    Default: demo
+    AllowedPattern: '[a-z0-9][a-z0-9-]{0,47}'
+    Description: Organizacion inicial; un administrador invita usuarios y les asigna grupos.
+
+Mappings:
+  Domains:
+    development:
+      Name: cotitrama-dev.lynxpardelle.com
+    testing:
+      Name: cotitrama-test.lynxpardelle.com
+    production:
+      Name: cotitrama.lynxpardelle.com
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Architectures: [arm64]
+    Timeout: 10
+    MemorySize: 256
+    LoggingConfig:
+      LogFormat: JSON
 
 Resources:
-  HealthApi:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub cotitrama-${Stage}
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      LambdaConfig:
+        PostConfirmation: !GetAtt OnboardingFunction.Arn
+      UserPoolTags:
+        Product: cotitrama
+        Environment: !Ref Stage
+      UsernameConfiguration:
+        CaseSensitive: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 3
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub cotitrama-${Stage}-${AWS::AccountId}
+      UserPoolId: !Ref UserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub cotitrama-web-${Stage}
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      SupportedIdentityProviders: [COGNITO]
+      CallbackURLs:
+        - !Sub
+          - https://${Domain}/auth/callback
+          - Domain: !FindInMap [Domains, !Ref Stage, Name]
+      LogoutURLs:
+        - !Sub
+          - https://${Domain}/
+          - Domain: !FindInMap [Domains, !Ref Stage, Name]
+      AccessTokenValidity: 15
+      IdTokenValidity: 15
+      RefreshTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      EnableTokenRevocation: true
+      PreventUserExistenceErrors: ENABLED
+      ExplicitAuthFlows: [ALLOW_REFRESH_TOKEN_AUTH]
+
+  OnboardingLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  OnboardingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteOwnLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt OnboardingLogGroup.Arn
+
+  OnboardingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../services/
+      Handler: onboarding/index.handler
+      Role: !GetAtt OnboardingRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref OnboardingLogGroup
+
+  OnboardingPoolPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ProvisionOwnPoolOrganization
+      Roles: [!Ref OnboardingRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: [cognito-idp:CreateGroup, cognito-idp:AdminAddUserToGroup]
+            Resource: !GetAtt UserPool.Arn
+
+  AllowCognitoConfirmation:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref OnboardingFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+      SourceAccount: !Ref AWS::AccountId
+
+  AdministratorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: !Sub org:${PilotOrganizationId}:admin
+      UserPoolId: !Ref UserPool
+      Description: Publicar catalogos y emitir cotizaciones de la organizacion inicial.
+
+  SellerGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: !Sub org:${PilotOrganizationId}:seller
+      UserPoolId: !Ref UserPool
+      Description: Consultar catalogos, simular y emitir cotizaciones.
+
+  ReaderGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: !Sub org:${PilotOrganizationId}:reader
+      UserPoolId: !Ref UserPool
+      Description: Consultar catalogos y propuestas de la organizacion.
+
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  ProductApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      StageName: !Ref Stage
+      StageName: $default
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 30
+        ThrottlingRateLimit: 15
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","route":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength"}'
+      Auth:
+        DefaultAuthorizer: CognitoJwt
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${UserPool}
+              audience: [!Ref UserPoolClient]
+            AuthorizationScopes: [openid]
+
+  CatalogTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  QuotesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
   HealthLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 14
 
+  HealthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteOwnLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt HealthLogGroup.Arn
+
   HealthFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: nodejs24.x
-      Architectures: [arm64]
       CodeUri: ../services/health/
       Handler: index.handler
       Timeout: 5
       MemorySize: 128
+      Role: !GetAtt HealthRole.Arn
       LoggingConfig:
-        LogFormat: JSON
         LogGroup: !Ref HealthLogGroup
       Events:
-        HealthRoute:
+        Health:
           Type: HttpApi
           Properties:
-            ApiId: !Ref HealthApi
-            Path: /health
+            ApiId: !Ref ProductApi
+            Path: /api/health
             Method: GET
             PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: NONE
+
+  CatalogLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  CatalogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OwnCatalogAndLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt CatalogLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:ConditionCheckItem]
+                Resource: !GetAtt CatalogTable.Arn
+
+  CatalogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../services/
+      Handler: catalog/index.handler
+      Role: !GetAtt CatalogRole.Arn
+      Environment:
+        Variables:
+          CATALOG_TABLE: !Ref CatalogTable
+      LoggingConfig:
+        LogGroup: !Ref CatalogLogGroup
+      Events:
+        ListCatalogs:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/catalogs
+            Method: GET
+        GetCatalogVersion:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/catalogs/{catalogId}/versions/{version}
+            Method: GET
+        PublishCatalog:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/catalogs/{catalogId}/publications
+            Method: POST
+
+  QuotesLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  QuotesRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OwnQuotesCatalogContractAndLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt QuotesLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:ConditionCheckItem]
+                Resource: !GetAtt QuotesTable.Arn
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt CatalogFunction.Arn
+
+  QuotesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../services/
+      Handler: quoting/index.handler
+      Role: !GetAtt QuotesRole.Arn
+      Environment:
+        Variables:
+          QUOTES_TABLE: !Ref QuotesTable
+          CATALOG_FUNCTION_NAME: !Ref CatalogFunction
+      LoggingConfig:
+        LogGroup: !Ref QuotesLogGroup
+      Events:
+        Preview:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/quotes/preview
+            Method: POST
+        IssueQuote:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/quotes
+            Method: POST
+        GetQuote:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/quotes/{quoteId}
+            Method: GET
+
+  WebLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  WebRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WriteOwnLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt WebLogGroup.Arn
+
+  WebFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../web/dist/lambda/
+      Handler: index.handler
+      Role: !GetAtt WebRole.Arn
+      MemorySize: 512
+      Timeout: 15
+      Environment:
+        Variables:
+          NODE_ENV: production
+          STAGE: !Ref Stage
+          PUBLIC_ORIGIN: !Sub
+            - https://${Domain}
+            - Domain: !FindInMap [Domains, !Ref Stage, Name]
+          AUTH_DOMAIN: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+          AUTH_CLIENT_ID: !Ref UserPoolClient
+          NG_ALLOWED_HOSTS: !Sub
+            - '${Domain},*.lambda-url.${AWS::Region}.on.aws'
+            - Domain: !FindInMap [Domains, !Ref Stage, Name]
+      LoggingConfig:
+        LogGroup: !Ref WebLogGroup
+
+  WebFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: AWS_IAM
+      TargetFunctionArn: !GetAtt WebFunction.Arn
+      InvokeMode: BUFFERED
+
+  WebOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-ssr
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub CotiTrama ${Stage}
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Aliases:
+          - !FindInMap [Domains, !Ref Stage, Name]
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          - Id: angular-ssr
+            DomainName: !Select [2, !Split ['/', !GetAtt WebFunctionUrl.FunctionUrl]]
+            OriginAccessControlId: !GetAtt WebOriginAccessControl.Id
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+              OriginReadTimeout: 20
+          - Id: product-api
+            DomainName: !Sub ${ProductApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+        DefaultCacheBehavior:
+          TargetOriginId: angular-ssr
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+          ResponseHeadersPolicyId: eaab4381-ed33-4a86-88ca-d9558dc6cd63
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: product-api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            ResponseHeadersPolicyId: eaab4381-ed33-4a86-88ca-d9558dc6cd63
+
+  AllowCloudFrontFunctionUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunctionUrl
+      FunctionName: !Ref WebFunction
+      Principal: cloudfront.amazonaws.com
+      FunctionUrlAuthType: AWS_IAM
+      SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+
+  AllowCloudFrontInvokeFunction:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref WebFunction
+      Principal: cloudfront.amazonaws.com
+      InvokedViaFunctionUrl: true
+      SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+
+  AliasA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !FindInMap [Domains, !Ref Stage, Name]
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt Distribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+        EvaluateTargetHealth: false
+
+  AliasAAAA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !FindInMap [Domains, !Ref Stage, Name]
+      Type: AAAA
+      AliasTarget:
+        DNSName: !GetAtt Distribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+        EvaluateTargetHealth: false
+
+  CatalogErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama catalog errors require investigation.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref CatalogFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  ApiServerErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama API 5xx responses require investigation.
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref ProductApi
+        - Name: Stage
+          Value: $default
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  QuotesErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama quote errors require investigation.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref QuotesFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  OnboardingErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama confirmation failures can leave users without organization.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref OnboardingFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
 
 Outputs:
+  PublicUrl:
+    Value: !Sub
+      - https://${Domain}
+      - Domain: !FindInMap [Domains, !Ref Stage, Name]
   HealthUrl:
-    Value: !Sub https://${HealthApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Stage}/health
+    Value: !Sub https://${ProductApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api/health
+  DistributionId:
+    Value: !Ref Distribution
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  LoginDomain:
+    Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+  CatalogFunctionName:
+    Value: !Ref CatalogFunction
+  QuotesFunctionName:
+    Value: !Ref QuotesFunction
+  OnboardingFunctionName:
+    Value: !Ref OnboardingFunction

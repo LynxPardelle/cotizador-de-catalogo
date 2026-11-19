@@ -1,0 +1,29 @@
+{
+  "name": "cotitrama-services",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "catalog/index.mjs",
+    "onboarding/index.mjs",
+    "quoting/index.mjs",
+    "quoting/domain/price.mjs",
+    "shared/auth.mjs",
+    "shared/dynamo.mjs",
+    "shared/errors.mjs",
+    "shared/http.mjs"
+  ],
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "test": "node --test",
+    "start": "node local-server.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "3.1172.0",
+    "@aws-sdk/client-dynamodb": "3.1172.0",
+    "@aws-sdk/client-lambda": "3.1172.0",
+    "@aws-sdk/lib-dynamodb": "3.1172.0"
+  }
+}

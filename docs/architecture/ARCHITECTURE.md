@@ -1,58 +1,76 @@
-# Arquitectura de Cotizador de Catálogo
+# Arquitectura de CotiTrama
 
-Un equipo comercial configura productos y cantidades, verifica opciones compatibles y obtiene una propuesta reproducible con el desglose de precios. El administrador del catálogo publica reglas versionadas. El comprador recibe una propuesta con la moneda, vigencia y condiciones que la generaron.
-
-## Estado de la base
-
-`infra/template.yaml` define una HTTP API con una Lambda Node.js 24 arm64 y un grupo de logs con retención marcada. Los servicios de dominio y sus recursos de datos corresponden al diseño del piloto. Las flechas punteadas del [diagrama](diagram.mmd) representan ese piloto.
+Microservicios serverless en AWS, con Angular SSR alojado en Lambda. El código, los contratos y la plantilla están en este repositorio; el despliegue y las pruebas con servicios administrados son una etapa posterior a la validación local.
 
 ```mermaid
 flowchart LR
-    Staff["Operador Angular"] --> Api["HTTP API"]
-    Api --> Health["Lambda de salud"]
-    Api -.-> Identity["Validación JWT"]
-    Api -.-> DomainA["Catálogos | Lambda"]
-    Api -.-> DomainB["Cotizaciones | Lambda"]
-    DomainA -.-> StoreA["DynamoDB bajo demanda"]
-    DomainB -.-> StoreB["DynamoDB bajo demanda"]
+  Browser[Angular hidratado] --> CDN[CloudFront + TLS + Route 53]
+  CDN -->|HTML y assets: OAC / IAM| Web[Lambda Angular SSR]
+  CDN -->|/api/* sin caché| API[HTTP API / JWT Cognito]
+  API --> Catalog[Lambda Catálogos]
+  API --> Quote[Lambda Cotizaciones]
+  API --> Health[Lambda Salud]
+  Catalog --> CDB[(DynamoDB Catálogos)]
+  Quote --> QDB[(DynamoDB Propuestas)]
+  Quote -->|contrato de lectura / Invoke IAM| Catalog
 ```
 
-## Responsabilidades y datos
+## Límites de servicio
 
-| Dominio | Responsabilidad | Almacenamiento propuesto |
+| Servicio | Responsabilidad | Datos / permisos |
 | --- | --- | --- |
-| Catálogos | Productos, opciones, listas de precios y revisiones publicadas | DynamoDB. Clave de partición por organización y catálogo, revisión publicada inmutable. |
-| Cotizaciones | Simulaciones, propuestas y vigencia comercial | DynamoDB. Clave por organización y cotización. Snapshot inmutable de importes, moneda y versión de catálogo al emitir. |
+| Web | SSR público, assets, configuración pública y navegación Angular | Sin acceso a tablas de negocio. Function URL IAM sólo invocable por CloudFront OAC. |
+| Catálogos | Publicación de revisiones, listado y lectura | Tabla propia. Publicación condicional; una revisión publicada no se edita. |
+| Cotizaciones | Motor determinista, simulación, emisión y consulta de snapshots | Tabla propia e invocación de lectura de Catálogos. Sin acceso directo a su tabla. |
+| Salud | Respuesta técnica de disponibilidad de la función | Sin datos de negocio; no acredita salud de dependencias. |
 
-El servicio de Catálogos es dueño de publicación y revisiones. Cotizaciones lee una revisión publicada por un contrato de lectura. Puede iniciar con ambos Lambdas en un stack y tablas separadas. La cotización se calcula de forma síncrona en una Lambda con operaciones acotadas. El cálculo usa enteros en unidades monetarias menores y decisiones explícitas de redondeo. El piloto acepta cantidades enteras. Cada revisión se valida antes de publicar. Un fallo al emitir permite reintentar con la misma clave de idempotencia. Si la clave llega con otro contenido, el API devuelve conflicto.
+Las funciones comparten utilidades de contrato, pero se ejecutan con roles separados. El monorepo no convierte los dominios en un único proceso. Una Lambda no consulta la tabla de otra. En esta primera versión un stack SAM coordina los recursos; separar despliegues de dominio se puede realizar conservando los contratos.
 
-Añadir una Lambda con SQS para exportación de documentos cuando se necesite entrega asíncrona y reintentos. Step Functions Standard queda reservado para importaciones largas con validación, publicación por etapas y seguimiento de ejecución. El cálculo interactivo permanece síncrono.
+## Frontend y dominios
 
-## Contratos previstos
+Angular 22 standalone, rutas lazy por flujo, SignalStore por ruta y HttpClient tipado. El navegador inicia sesión mediante Authorization Code con PKCE. SSR no carga datos comerciales ni serializa tokens en HTML. El backend calcula todos los importes.
 
-| Operación | Alcance |
+Se reutiliza el patrón del portafolio: Express + AngularNodeAppEngine + serverless-http dentro de Lambda Node.js 24 arm64. CloudFront usa un origen OAC para la Function URL IAM de Web y otro origen HTTP API para `/api/*`; los POST de negocio no atraviesan la Function URL del frontend. HTML, configuración y respuestas comerciales no se cachean; los assets con hash permiten caché inmutable en el navegador.
+
+Route 53 publica únicamente los aliases del producto: `cotitrama-dev.lynxpardelle.com`, `cotitrama-test.lynxpardelle.com` y `cotitrama.lynxpardelle.com`. El certificado ACM de CloudFront debe existir en us-east-1 y cubrir el nombre del ambiente. No se reemplazan aliases del portafolio ni se cambian nameservers.
+
+## Identidad y aislamiento
+
+Cada ambiente crea su Cognito UserPool, cliente público sin secreto y dominio de autenticación. El registro público usa la pantalla gestionada de Cognito y exige verificar el correo. Un trigger PostConfirmation crea una organización derivada del identificador confirmado y asigna el grupo `org:<organizationId>:admin`, de manera idempotente. El cliente no puede elegir la organización ni el rol. Un operador autorizado puede asignar roles seller/reader dentro de una organización; la gestión visual de miembros sigue pendiente. Los tokens de acceso firmados llevan esos grupos. API Gateway valida issuer, audience y scope; los servicios exigen token de acceso y validan rol y organización.
+
+Una cabecera o un campo del body no puede seleccionar organización. Todas las claves de persistencia contienen el identificador autenticado. La consulta de recursos de otra organización devuelve 404. Publicar requiere admin; simular/emitir admin o seller; consultar admite reader. Los tokens se conservan durante la sesión del navegador, con vencimiento y limpieza al salir; no se incluyen en logs ni en SSR.
+
+## Contratos HTTP
+
+| Operación | Resultado |
 | --- | --- |
-| GET /v1/catalogs/{catalogId}/versions/{version} | Consulta de una versión publicada con identidad de organización. |
-| POST /v1/catalogs/{catalogId}/publications | Publicación condicional con número de versión y clave de idempotencia. |
-| POST /v1/quotes/preview | Cálculo determinista a partir de versión, opciones y cantidades. Devuelve desglose y reglas aplicadas. |
-| POST /v1/quotes | Emisión idempotente de una propuesta y su snapshot. |
+| GET /api/health | Salud técnica pública de la función. |
+| GET /api/v1/catalogs | Catálogos publicados de la organización, revisión más reciente. |
+| GET /api/v1/catalogs/{catalogId}/versions/{version} | Revisión exacta e inmutable. |
+| POST /api/v1/catalogs/{catalogId}/publications | Publicación condicional de una revisión validada. |
+| POST /api/v1/quotes/preview | Desglose determinista y reglas aplicadas. |
+| POST /api/v1/quotes | Emisión con cabecera Idempotency-Key y snapshot inmutable. |
+| GET /api/v1/quotes/{quoteId} | Consulta de la propuesta conservada. |
 
-Cada catálogo define moneda, exponente monetario, vigencia y política de redondeo. JavaScript usa bigint para aritmética interna y cadenas de enteros en JSON. Los porcentajes se expresan como fracciones enteras. Las reglas son tipos permitidos y parámetros validables. Toda edición incrementa versión. Publicar y emitir usan escrituras condicionales. Las cotizaciones guardan el snapshot comercial, de modo que volver a consultarlas produce el mismo desglose.
+El catálogo declara moneda, exponente, vigencia y redondeo. El motor usa BigInt; JSON transporta cadenas de enteros en unidades menores. Los porcentajes son razones enteras y las reglas se ordenan de manera estable por prioridad. Se validan cantidades, opciones incompatibles, revisión exacta, caducidad y límites monetarios antes de emitir. El fixture en `services/fixtures/catalog.mjs` documenta el contrato ejecutable.
 
-## Angular y operación
+La tabla de propuestas conserva el snapshot y la clave de idempotencia en una transacción condicional. Repetir el mismo contenido devuelve el resultado original; reutilizar la clave con otro contenido produce 409. La emisión no altera su resultado cuando se publica otra revisión.
 
-Angular standalone con rutas lazy por flujo. Estado de pantalla en Signals locales. Estado de cada flujo en NgRx SignalStore con proveedores por ruta. Las llamadas HTTP viven en el servicio de datos de cada función. El backend decide operaciones que afecten dinero. Los eventos conservan un id de correlación para seguimiento.
+## Operación y límites
 
-En el piloto, los bundles estáticos se pueden alojar en S3 privado con CloudFront y Origin Access Control. API Gateway valida tokens de Cognito o del proveedor OIDC. La Lambda verifica pertenencia y permisos sobre cada recurso. Separar lectores, vendedores y administradores. Validar la pertenencia a la organización antes de leer el catálogo o escribir la cotización. Evitar nombres de clientes, descuentos confidenciales y reglas completas en logs.
+DynamoDB bajo demanda, cifrado, recuperación a un punto en el tiempo y retención de tablas al eliminar el stack. Logs con 14 días de retención; nunca registrar payloads comerciales ni tokens. HTTP API limita el caudal. Los recursos se aíslan por stack y ambiente; la elevación sigue development → testing → main.
 
-Los Lambdas escalan por invocación. El MVP usa DynamoDB bajo demanda y colas con límites explícitos. S3, logs y datos retenidos pueden generar cargos incluso cuando la aplicación no recibe solicitudes. Presupuestos, métricas de latencia y errores, retención y alarmas de cola se configuran por ambiente cuando se habiliten esos recursos.
-
-## Casos de fallo a verificar
-
-Cubrir importes extremos, opciones incompatibles, orden y prioridad de reglas, redondeo, caducidad, versión inexistente, edición concurrente y repetición de la misma solicitud de emisión.
+La demo en loopback usa datos sintéticos y repositorios en memoria, separados de los adaptadores AWS. Las pruebas locales no sustituyen la comprobación de IAM, JWT, condiciones/transacciones DynamoDB y DNS/TLS en development. Los tiempos de usuarios, correcciones y reutilización de reglas requieren un piloto autorizado. Exportación asíncrona/SQS e importaciones largas/Step Functions quedan fuera del primer flujo.
 
 ## Referencias
 
-- [Runtime Node.js en Lambda](https://docs.aws.amazon.com/lambda/latest/dg/lambda-nodejs.html)
-- [DynamoDB bajo demanda](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/on-demand-capacity-mode.html)
-- [Flujos de AWS Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/choosing-workflow-type.html)
+- [Angular SSR](https://angular.dev/guide/ssr)
+- [CloudFront OAC para Lambda](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-lambda.html)
+- [Autorizadores JWT en HTTP API](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html)
+- [Transacciones DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html)
+
+## Sitio comercial y planes
+
+La raíz pública sirve una landing SSR con propuesta de valor, muestra de propuesta, flujo de trabajo, preguntas frecuentes y registro. Esencial, Equipo y Empresa se presentan como planes en preparación, sin contratación, cobros ni cuotas comerciales aplicadas. [Diseño de suscripciones](../planes-suscripcion.md). Las rutas de trabajo permanecen separadas del sitio público. Desarrollo envía X-Robots-Tag noindex,nofollow.
+
+El trigger de confirmación sólo recibe invocaciones de Cognito del pool propio. Su rol puede crear grupos y asignar miembros únicamente en ese pool; la política se adjunta como recurso separado para evitar un ciclo entre UserPool y función. Hay alarmas de errores de onboarding y API5xx, además de las funciones de negocio.

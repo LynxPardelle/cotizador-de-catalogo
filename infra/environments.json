@@ -1,0 +1,15 @@
+{
+  "product": "cotitrama",
+  "verifiedReadOnlyAt": "2026-11-19",
+  "region": "us-east-1",
+  "parameters": {
+    "HostedZoneId": "Z05088763QG63CC5SE7PN",
+    "CertificateArn": "arn:aws:acm:us-east-1:765932874577:certificate/4b008cec-97a6-447e-bf2f-9165e435b363",
+    "PilotOrganizationId": "demo"
+  },
+  "environments": {
+    "development": { "branch": "development", "stackName": "cotitrama-development", "domain": "cotitrama-dev.lynxpardelle.com" },
+    "testing": { "branch": "testing", "stackName": "cotitrama-testing", "domain": "cotitrama-test.lynxpardelle.com" },
+    "production": { "branch": "main", "stackName": "cotitrama-production", "domain": "cotitrama.lynxpardelle.com" }
+  }
+}

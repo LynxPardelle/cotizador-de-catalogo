@@ -1,0 +1,28 @@
+import { HttpError } from './errors.mjs';
+
+// API Gateway verifies signature, issuer, audience, expiry and required scopes.
+// Membership comes from the access token's administrator-managed Cognito groups.
+export function identity(event) {
+  const claims = event?.requestContext?.authorizer?.jwt?.claims;
+  if (!claims || claims.token_use !== 'access' || typeof claims.sub !== 'string' || !claims.sub) {
+    throw new HttpError(401, 'UNAUTHORIZED', 'Inicia sesión con una cuenta autorizada.');
+  }
+  let groups = claims['cognito:groups'];
+  if (typeof groups === 'string') {
+    try { groups = JSON.parse(groups); }
+    catch {
+      const serialized = groups.trim();
+      const list = serialized.startsWith('[') && serialized.endsWith(']') ? serialized.slice(1,-1) : serialized;
+      groups = list.split(',').map(value => value.trim());
+    }
+  }
+  if (!Array.isArray(groups)) groups = [];
+  const memberships = groups.filter(group => typeof group === 'string' && /^org:[a-zA-Z0-9_-]{1,64}:(admin|seller|reader)$/.test(group));
+  if (memberships.length !== 1) throw new HttpError(403, 'MEMBERSHIP_REQUIRED', 'La cuenta necesita una sola organización y un rol asignado.');
+  const [, organizationId, role] = memberships[0].split(':');
+  return { subject: claims.sub, organizationId, role };
+}
+
+export function requireRole(user, roles) {
+  if (!roles.includes(user.role)) throw new HttpError(403, 'FORBIDDEN', 'Tu rol no permite esta operación.');
+}

@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+const module=await import('./local-server.mjs').catch(()=>({}));
+test('local demo exposes only synthetic catalog and preserves emitted quote after republishing',async(t)=>{
+  assert.equal(typeof module.createDemoServer,'function');
+  const server=await module.createDemoServer();
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const base=`http://127.0.0.1:${server.address().port}`;
+  const config=await (await fetch(`${base}/config.json`)).json();
+  assert.equal(config.demo,true);
+  const catalogs=await (await fetch(`${base}/api/v1/catalogs`)).json();
+  assert.equal(catalogs.catalogs[0].catalogId,'oficina');
+  const body={catalogId:'oficina',version:1,currency:'MXN',items:[{productId:'desk',quantity:5,optionIds:['oak']}]};
+  const response=await fetch(`${base}/api/v1/quotes`,{method:'POST',headers:{'content-type':'application/json','idempotency-key':'demo-test'},body:JSON.stringify(body)});
+  assert.equal(response.status,201);
+  const quote=await response.json();
+  assert.equal(quote.totalMinor,'2517500');
+  const get=await fetch(`${base}/api/v1/quotes/${quote.quoteId}`);
+  assert.deepEqual(await get.json(),quote);
+});
