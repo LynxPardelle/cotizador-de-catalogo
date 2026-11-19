@@ -26,7 +26,7 @@ Medir tiempos de cotización, correcciones y reutilización de reglas con person
 
 ## Instrumentación del piloto
 
-La instrumentación está implementada y verificada localmente; su aceptación en AWS y navegador está **en validación**. El administrador consulta `/piloto` para el espacio seleccionado, en períodos de 7, 30 o 90 días calendario UTC que incluyen hoy. El panel muestra emisiones por día y cuentas emisoras medidas sin revelar su identidad. El plan, los miembros actuales, los catálogos activos y el consumo mensual son una fotografía actual, distinta del historial elegido.
+La instrumentación está **desplegada y verificada en development con AWS y navegador autenticado mediante JWT real**. La aceptación usa datos sintéticos y actividad automatizada, sin presentarlos como mediciones de personas. El administrador consulta `/piloto` para el espacio seleccionado, en períodos de 7, 30 o 90 días calendario UTC que incluyen hoy. El panel muestra emisiones por día y cuentas emisoras medidas sin revelar su identidad. El plan, los miembros actuales, los catálogos activos y el consumo mensual son una fotografía actual, distinta del historial elegido. La [evidencia técnica](verificacion.md) conserva los resultados y sus límites.
 
 El tiempo es una estimación de actividad que comunica el navegador durante la configuración, no una medida completa de la jornada comercial ni una prueba de productividad humana. La media y la mediana usan sólo propuestas instrumentadas y se presentan junto al tamaño de muestra y las mediciones ausentes. Una duración reportada de cero es una muestra válida; las propuestas antiguas sin datos de tiempo se conservan en el total y no reciben una duración inventada.
 

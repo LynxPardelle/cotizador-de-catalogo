@@ -2,7 +2,58 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
-## Última entrega: límites y avisos de consumo
+## Última entrega: métricas del piloto
+
+Runtime desplegado: **7dbffa9b9fdda31212be56a8e658e3d6f956dcda**, con SourceCommit coincidente y estado UPDATE_COMPLETE en cotitrama-development. La [CI del runtime](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44634469521) terminó correctamente. Los commits posteriores de evidencia no cambian el runtime.
+
+El panel `/piloto` permite a administradores consultar 7, 30 y 90 días calendario UTC de la organización autorizada. Distingue emisiones, emisores con cobertura, media/mediana del tiempo activo estimado por el navegador, muestras y ausentes, ajustes entre revisiones exitosas y correcciones declaradas. Plan, miembros, catálogos y cuota mensual se presentan como fotografía actual. Las [definiciones](architecture/004-metricas-del-piloto.md) explican el alcance y los límites de interpretación.
+
+La emisión conserva `pilot` opcional junto al snapshot y la cuota en la transacción existente. El hash comercial excluye esa medición y los reintentos conservan la primera confirmada. Volver a revisar el mismo contenido tras una respuesta fallida mantiene clave y payload; una edición comercial posterior inicia otra medición. Las correcciones por categoría son declaraciones idempotentes: no cambian importes ni consumen otra propuesta.
+
+### Comprobaciones locales de métricas
+
+| Comprobación | Resultado |
+| --- | --- |
+| Servicios y guardas de QA | **101 pruebas correctas**. Incluyen parser, idempotencia, permisos, fechas UTC, históricos sin datos de tiempo, privacidad y paginación/presupuesto DynamoDB. |
+| Angular | **63 pruebas correctas en 14 archivos**: tracker monotónico, foco/inactividad, reintentos, edición posterior, cobertura, roles y respuestas cruzadas. |
+| Empaquetado | **Dos pruebas correctas**. |
+| Total | **166 pruebas correctas**. |
+| Angular SSR | Build exitoso: 360.98 kB iniciales, 98.31 kB de transferencia estimada. |
+| Artefacto final | Rutas profundas, incluida /piloto, SSR sin tokens y configuración sin caché; paquete con assets finales styles-ENQJB5QH.css y main-OCHHRZZD.js. |
+| SAM y CloudFormation | Build de seis funciones y lint de ambas plantillas correctos. Changeset sin eliminaciones ni reemplazos de tablas/pool; dos permisos nuevos para rutas del API. |
+
+La revisión independiente detectó y resolvió el arrastre de una medición congelada a una configuración distinta y el cambio de clave al volver a revisar un contenido idéntico tras un fallo. También se añadió un presupuesto compartido de 100 páginas, 30,000 registros y comprobaciones de seis segundos entre lecturas. Superarlo devuelve 503 METRICS_LIMIT sin agregados parciales; no interrumpe una solicitud SDK ya en curso. La consulta histórica acotada es una solución de piloto y no acredita rendimiento sostenido de Empresa.
+
+### Aceptación de métricas en AWS
+
+`tools/pilot-metrics-smoke.mjs` completó **seis comprobaciones** en recursos exclusivos de development:
+
+1. Verificación del namespace, identidad real y organización propia de tres cuentas QA sintéticas, creadas con el envío de correo suprimido. Pool, cuenta, región, stack y tablas están restringidos por guardas.
+2. Tres emisiones del propietario: mediciones controladas de 60 y 120 segundos, más una propuesta sin tiempo. Replays paralelos con otros metadatos válidos conservaron la primera propuesta y su medición; otro contenido con la misma clave devolvió 409 y campos desconocidos de pilot devolvieron 400. Cuota final: tres.
+3. Una emisión de otra organización quedó fuera del panel del propietario; declarar correcciones sobre propuestas ajenas devolvió 404 en ambas direcciones.
+4. Dos registros de corrección sobre una propuesta: dos solicitudes simultáneas de la misma declaración devolvieron 201/200 y un único evento. Replay conservó fecha/categoría, cambiar la categoría para el mismo identificador devolvió 409 y notas libres fueron rechazadas. Snapshot completo y cuota de tres emisiones permanecieron intactos.
+5. Las ventanas 7/30/90 devolvieron tres emisiones, un emisor, dos muestras y una medición ausente; media y mediana de 90 segundos y dos correcciones sobre una propuesta. La serie diaria y la ausencia de sujetos, correos y claves privadas se comprobaron en las respuestas. Un período inválido fue rechazado.
+6. Un vendedor no pudo consultar el panel y sí repetir una declaración autorizada; al degradarlo a lector, métricas y registros nuevos o repetidos devolvieron 403. La membresía QA temporal fue retirada al cerrar el escenario.
+
+Las invocaciones del helper usan IAM con eventos HTTP API v2. Las duraciones de 60/120 segundos son **fixtures declarados**, no tiempo observado de personas. No se prepararon contadores de cuotas ni se alteró el reloj de AWS en esta entrega.
+
+### Flujo autenticado de navegador
+
+- Sin sesión, /piloto mostró únicamente el acceso. Las rutas públicas de métricas y registro de corrección devolvieron 401 sin JWT.
+- La cuenta QA entró mediante Cognito, Authorization Code y PKCE. El panel mostró tres emisiones, muestra 2 de 3, una ausente y media/mediana de 1 min 30 s. Los filtros de 7, 90 y 30 días cambiaron las fechas UTC correctamente.
+- Desde /cotizar, cantidad dos produjo un preview de 9,000 MXN. Cambiar a tres y revisar produjo 13,500 MXN. La emisión creó la propuesta `8c918e47-ba3a-4c3a-8c2b-54d30bcf769b`, con un ajuste y una estimación del navegador de **15,580 ms**. Es una interacción automatizada de QA; no valida productividad ni ahorro humano.
+- Al reabrirla se registró la categoría Reglas o importes y se mostró la confirmación. El precio conservó 13,500 MXN. El panel pasó a **cuatro emisiones, tres muestras, una ausente, tres ajustes en dos configuraciones y tres correcciones sobre dos propuestas**. Media 65,193.33 ms y mediana 60,000 ms; la interfaz redondea a 1 min 5 s y 1 min 0 s. El consumo actual mostró un miembro, un catálogo y cuatro propuestas del mes.
+- Las lecturas de comprobación posteriores verificaron que la muestra del navegador estaba persistida, las fórmulas coincidían y las correcciones no añadieron cuota. La sesión se cerró y la landing volvió a mostrar Iniciar sesión.
+
+### Evidencia y limpieza de métricas
+
+Evidencia local ignorada por Git: `artifacts/pilot-tests.log`, `artifacts/pilot-sam-build.log`, `artifacts/pilot-changeset.json`, `artifacts/pilot-metrics-aws.json`, `artifacts/pilot-metrics-browser.json`, `artifacts/cotitrama-piloto-inicial.jpg`, `artifacts/cotitrama-piloto.jpg` y `artifacts/cotitrama-piloto-correccion.jpg`.
+
+Cleanup eliminó únicamente las tres cuentas QA registradas y sus grupos vacíos; el pool propio quedó con cero usuarios y el archivo privado de credenciales dejó de existir. Los registros sintéticos DynamoDB se conservaron como evidencia. El stack cerró UPDATE_COMPLETE con SourceCommit coincidente y sus cinco alarmas en OK. No se cambiaron otros proyectos, testing, main ni Stripe.
+
+El primer piloto con clientes, personas y catálogos autorizados continúa pendiente en TASK-006. Esta instrumentación completa TASK-012 técnicamente en development; los datos sintéticos no validan demanda, precios, ahorro o errores resueltos. Stripe continúa pendiente, sin contratación ni cobros. Testing y main mantienen el flujo de promoción existente.
+
+## Evidencia previa: límites y avisos de consumo
 
 Runtime desplegado: **f6df9836c93d920177ec880ee2354135e3b8592d**, con SourceCommit coincidente en cotitrama-development y estado UPDATE_COMPLETE. La [CI del runtime](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44627215886) terminó correctamente. Los commits de evidencia posteriores no cambian el runtime.
 

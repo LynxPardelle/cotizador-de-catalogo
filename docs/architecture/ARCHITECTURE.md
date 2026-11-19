@@ -2,7 +2,7 @@
 
 Microservicios serverless en AWS, con Angular SSR alojado en Lambda. La base comercial, el registro con correo real y el núcleo de Equipo con su tabla propia de pertenencias están desplegados y verificados en development. La aceptación de Equipo incluye transacciones reales y navegador con JWT, con cambio y retirada de permisos efectivos sin esperar a renovar el token. Las revisiones de cada entrega y sus comprobaciones se registran en [Verificación](../verificacion.md). Testing y producción conservan sus puertas de promoción.
 
-El incremento de métricas del piloto está implementado y verificado localmente; su aceptación AWS y de navegador está **en validación**. Reutiliza el servicio y la tabla de Cotizaciones, sin un nuevo dominio, tabla ni índice global.
+El incremento de métricas del piloto está **desplegado y verificado en development con AWS y navegador autenticado mediante JWT real**. La aceptación del runtime `7dbffa9` usa fixtures sintéticos y actividad automatizada, sin acreditar productividad humana. Reutiliza el servicio y la tabla de Cotizaciones, sin un nuevo dominio, tabla ni índice global. Sus resultados están en [Verificación](../verificacion.md).
 
 ```mermaid
 flowchart LR

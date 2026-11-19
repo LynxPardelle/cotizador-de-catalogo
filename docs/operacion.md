@@ -97,6 +97,28 @@ Los únicos planes admitidos son esencial, equipo y empresa. El script comprueba
 
 Antes de activar contadores en un ambiente con usuarios anteriores, importar sus pertenencias Cognito pendientes, pausar escritores antiguos y drenar el timeout de Lambda antes del primer backfill. No inicializar consumo como cero si ya hay datos. En esta entrega se comprobó que development no tenía usuarios Cognito antes del despliegue. La inicialización de contadores usa lecturas fuertes paginadas y escritura condicional; no borrar ni reiniciar contadores para resolver un límite comercial. [Diseño y condiciones de activación](architecture/003-limites-y-consumo.md).
 
+## Consultar las métricas del piloto
+
+Un administrador abre `/piloto` y elige 7, 30 o 90 días calendario UTC para la organización activa. El panel distingue emisiones, muestra de tiempo activo estimado, mediciones ausentes, ajustes entre revisiones exitosas y correcciones declaradas. Miembros, catálogos y cuota del mes son el estado actual del espacio. Cambiar de ventana no reconstruye esos valores históricos.
+
+La configuración captura la medición al primer intento de emitir; los reintentos idénticos conservan su clave y medición. Una edición comercial posterior abre otro flujo. El tiempo puede ser cero cuando el navegador no tuvo foco, y los históricos sin instrumentación aparecen sin medición. No usar estos datos técnicos para afirmar ahorro sin contrastarlos con personas y procesos reales.
+
+Un vendedor o administrador abre una propuesta guardada y usa **Registrar corrección detectada** para declarar una categoría. La declaración no cambia sus importes ni consume otra propuesta. Si falla la respuesta, **Reintentar registro** conserva la referencia y el motivo; sólo **Registrar otra corrección** inicia un registro adicional. El administrador actualiza el panel para consultar el nuevo evento.
+
+La consulta aplica un presupuesto compartido de 100 páginas, 30,000 registros y comprobaciones de plazo de seis segundos entre lecturas. `503 METRICS_LIMIT` significa que hace falta revisar el volumen y el acceso temporal del histórico; no es un agregado parcial ni se resuelve necesariamente eligiendo menos días, porque se incluyen propuestas anteriores sin metadatos temporales. La llamada SDK que ya esté en curso conserva su propio timeout. Ver [definiciones y límites](architecture/004-metricas-del-piloto.md).
+
+Para repetir la aceptación sintética de este incremento, usar exclusivamente development y un stack en `UPDATE_COMPLETE`:
+
+```powershell
+node --use-system-ca tools/pilot-metrics-smoke.mjs --prepare
+npm run smoke:metrics:development
+node --use-system-ca tools/pilot-metrics-smoke.mjs --browser
+# Completar el flujo autenticado del panel y la propuesta en el navegador.
+npm run cleanup:metrics:development
+```
+
+Los helpers restringen cuenta, región, stack y tablas propias; preparan tres cuentas QA con envío de correo suprimido y organizaciones independientes. Las credenciales QA son temporales e ignoradas por Git. La limpieza elimina sólo esas cuentas y sus grupos registrados; conserva los registros sintéticos DynamoDB como evidencia. Las duraciones de 60/120 segundos de la prueba son fixtures declarados para verificar media y mediana, sin modificar el reloj de AWS ni demostrar tiempos humanos. El piloto sigue sin cobros y Stripe continúa pendiente.
+
 ## Registro y recuperación
 
 PostConfirmation requiere email_verified y la confirmación de alta; un cambio de contraseña no crea otra organización. Si un fallo de AWS deja una cuenta recién confirmada sin perfil inicial, revisar el evento y su estado antes de reejecutar el evento original con la función de incorporación por IAM. Verificar perfil, pertenencia y contador de administradores antes de pedir otro inicio de sesión. Una pertenencia deliberadamente retirada no es un fallo de incorporación y no se restaura por esta vía. La aceptación de invitaciones requiere identidad, correo verificado y token destinatario; no hay un endpoint que permita escoger libremente organización o rol.

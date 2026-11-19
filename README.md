@@ -62,7 +62,7 @@ Esencial **$399 MXN/mes** propone 2 miembros, 2 catálogos activos y 100 propues
 
 ## Medición del piloto
 
-La instrumentación y sus pruebas locales están implementadas; la aceptación de este incremento en AWS y navegador está **en validación**. `/piloto` está reservado a administradores y muestra únicamente el espacio autorizado. Incluye emisiones por día, cobertura de cuentas emisoras, media/mediana de tiempo activo estimado por el navegador, tamaño de muestra, mediciones ausentes, ajustes de configuración y correcciones declaradas. El uso actual de miembros, catálogos y cuota mensual se consulta por separado; no es un promedio del período.
+La instrumentación está desplegada y **verificada en development con AWS y navegador autenticado mediante JWT real**. La aceptación usa fixtures sintéticos y actividad automatizada; no constituye una medición con personas. [Evidencia de la entrega](docs/verificacion.md). `/piloto` está reservado a administradores y muestra únicamente el espacio autorizado. Incluye emisiones por día, cobertura de cuentas emisoras, media/mediana de tiempo activo estimado por el navegador, tamaño de muestra, mediciones ausentes, ajustes de configuración y correcciones declaradas. El uso actual de miembros, catálogos y cuota mensual se consulta por separado; no es un promedio del período.
 
 Las propuestas históricas sin medición siguen contando en las emisiones. Una muestra ausente no se convierte en cero minutos ni en un emisor identificado. Las correcciones se declaran por categoría, no modifican la propuesta ni acreditan que se haya resuelto un error de precio; tampoco consumen otra propuesta del plan. Los reintentos conservan el primer snapshot y su medición, sin añadir muestras o cuota.
 
