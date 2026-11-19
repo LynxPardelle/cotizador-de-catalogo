@@ -8,6 +8,8 @@ Cotizaciones que conservan sus reglas. Publica catálogos versionados, configura
 - [Plan y pendientes](plan/feature-primera-version-1.md)
 - [Planes propuestos y costos](docs/planes-suscripcion.md)
 - [Métricas del piloto y sus definiciones](docs/architecture/004-metricas-del-piloto.md)
+- [Protocolo del piloto con usuarios](docs/piloto/protocolo.md)
+- [Guía para primeros usuarios](docs/piloto/guia-primeros-usuarios.md)
 - [Operación y despliegue](docs/operacion.md)
 - [Promoción development → testing → main](docs/promocion.md)
 
@@ -67,3 +69,9 @@ La instrumentación está desplegada y **verificada en development con AWS y nav
 Las propuestas históricas sin medición siguen contando en las emisiones. Una muestra ausente no se convierte en cero minutos ni en un emisor identificado. Las correcciones se declaran por categoría, no modifican la propuesta ni acreditan que se haya resuelto un error de precio; tampoco consumen otra propuesta del plan. Los reintentos conservan el primer snapshot y su medición, sin añadir muestras o cuota.
 
 La consulta usa un presupuesto compartido de 100 páginas, 30,000 registros y seis segundos entre lecturas. Si se supera, devuelve `503 METRICS_LIMIT` sin un resultado parcial; este diseño no garantiza consultar 90 días de cualquier historial de Empresa. Las [definiciones y límites](docs/architecture/004-metricas-del-piloto.md) distinguen fixtures sintéticos, instrumentación y resultados con personas. El piloto humano autorizado de TASK-006 y Stripe siguen pendientes.
+
+## Preparar el piloto con personas
+
+El [paquete del piloto](docs/piloto/protocolo.md) propone dos organizaciones y cuatro personas, catorce días desde que accesos y catálogos estén listos, y veinte pares de tareas frente al proceso habitual. Incluye [catorce casos funcionales](docs/piloto/casos-de-prueba.md), una [guía de incorporación](docs/piloto/guia-primeros-usuarios.md), un catálogo ficticio completo y [plantillas vacías de sesiones, incidencias, cierre y retroalimentación](docs/piloto/plantillas/README.md). La preparación está completa; no se han convocado ni medido participantes de esta cohorte.
+
+Los criterios distinguen integridad/aislamiento, coincidencia con referencias independientes, autonomía, cobertura, tiempos comparables y utilidad. La meta del 20% de mejora es exploratoria. La comparación usa tiempo de pared observado con el mismo inicio/final en ambos métodos; la media de actividad del panel mezcla práctica y otras emisiones, y no representa los veinte pares. Los registros completados se conservan fuera de Git. Stripe sigue pendiente, sin contratación ni cobros.

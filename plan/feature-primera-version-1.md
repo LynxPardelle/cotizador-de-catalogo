@@ -1,6 +1,6 @@
 ---
 goal: Primera versión de CotiTrama
-version: '1.5'
+version: '1.6'
 date_created: 2026-11-17
 date_updated: 2026-11-19
 status: 'In Progress'
@@ -32,7 +32,7 @@ El producto pasa de una base de salud a un flujo comercial reproducible. Se mant
 | **TASK-003** Flujo Angular y sesión | Catálogos, configuración, preview, emisión y reapertura; estados de carga/error/vigencia. PKCE, sesión expirable y roles UI. SSR y paquete Lambda con invocación local. | Verificada localmente (19/11/2026) |
 | **TASK-004** Piloto sintético | Catálogo de oficina con opciones, incompatibilidades y volumen; servidor demo loopback y carga pequeña reproducible con informe. | Piloto sintético verificado; piloto comercial pendiente |
 | **TASK-005** Microservicios y dominio en nube | SAM completo, Cognito, IAM mínimo, logs/retención, DynamoDB, CloudFront OAC y Route 53. Lint y CI. Despliegue development, smoke JWT/DDB/DNS y luego promociones. | Development desplegado y verificado; testing/main pendientes |
-| **TASK-006** Piloto autorizado | Usuarios de prueba y catálogo del primer sector autorizados. Medir minutos/cotización, correcciones, reutilización de reglas y latencia AWS. Alarmas y presupuesto del ambiente. | Pendiente |
+| **TASK-006** Piloto autorizado | Personas y catálogo del primer sector autorizados; ejecutar el protocolo, observar tareas y registrar resultados por organización. Tiempo de pared comparable, correcciones auditadas, uso y valoración comercial; métricas técnicas auxiliares aparte. Reutilización de reglas, latencia y costo requieren sus propias observaciones y no se infieren del panel. | Preparación documentada en TASK-013; convocatoria, ejecución y resultados humanos pendientes |
 
 TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrados y navegador autenticado. Testing y main conservan su puerta de promoción. TASK-006 requiere evidencia real; un catálogo sintético no valida demanda ni ahorro comercial.
 
@@ -45,6 +45,8 @@ TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrado
 - **TASK-011** Límites operativos Esencial, Equipo y Empresa, contadores transaccionales por dominio, mes UTC, archivado/reactivación de catálogos, avisos 80%/100%/exceso y pantalla `/consumo`. Fuente canónica `services/shared/plans.json`, plan autoritativo en Equipo y asignación por operador IAM sin cobros. Desplegada y verificada en development: 125 pruebas locales, diez comprobaciones AWS y navegador con JWT real. Los bordes altos preparados y las emisiones reales se distinguen en [Verificación](../docs/verificacion.md).
 - **TASK-012** Métricas del piloto y panel `/piloto` para administradores: períodos calendario UTC de 7/30/90 días, emisiones y cuentas emisoras con cobertura, media/mediana y muestra/ausentes de tiempo activo estimado, ajustes de configuración y correcciones declaradas por categoría. Captura `pilot` opcional validada; hash comercial sin telemetría, primer snapshot conservado y clave de emisor privada fuera de la respuesta de propuesta. Declaraciones idempotentes de vendedores/administradores sin cambiar snapshots ni cuotas. Consultas fuertes y paginadas propias, sin Scan global, con presupuesto compartido de 100 páginas/30,000 registros/seis segundos y fallo explícito sin resultado parcial. **Desplegada y verificada en development con AWS y navegador JWT real (19/11/2026).** [Definiciones y límites](../docs/architecture/004-metricas-del-piloto.md). La aceptación sintética y automatizada no completa el piloto humano de TASK-006; Stripe sigue pendiente.
 
+- **TASK-013** Preparar el piloto con usuarios: [protocolo](../docs/piloto/protocolo.md) con dos organizaciones/cuatro personas y catorce días desde preparación; catorce casos funcionales, cinco referencias ficticias verificables, guía de incorporación y plantillas privadas de sesiones/incidencias/cierre/retroalimentación. Veinte pares previstos y criterios de integridad, exactitud, autonomía, cobertura, mejora exploratoria y utilidad. Preparación documental completada y revisada, sin participantes convocados, resultados humanos ni cambios de runtime. Stripe continúa pendiente.
+
 ## Verificación y evidencia
 
 - **TEST-001** Motor puro: importes, moneda/exponente, revisión exacta, redondeo, incompatibilidad, caducidad, límites y prioridad estable.
@@ -56,6 +58,8 @@ TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrado
 - **TEST-007** Equipo: autorización con pertenencias vigentes, rechazo de selección ajena y de claims históricos; invitación al correo correcto, caducidad, idempotencia y no restauración tras retirada. Cambios concurrentes preservan un administrador. Migración inicial conserva `PROFILE` y no repuebla una pertenencia eliminada. La aceptación del núcleo se realizó con DynamoDB/Cognito reales y navegador autenticado; conservar estas comprobaciones al actualizar el servicio.
 - **TEST-008** Consumo: contador y creación atómicos, última plaza concurrente, revisiones y reintentos sin consumo adicional, boot de históricos paginado, mes UTC, archivado/liberación/reactivación, reducción con exceso y conservación de snapshots. Avisos sin datos en SSR ni respuestas cruzadas entre cuentas/organizaciones. AWS distingue emisiones reales de preparaciones sintéticas para los bordes altos; no se acredita carga masiva con un contador preparado.
 - **TEST-009** Piloto instrumentado: datos opcionales y acotados, preview comercial intacto, replay con otra medición válida sin nueva cuota/muestra, snapshot y emisor privado, históricos completos con ausentes explícitos, ventanas UTC y días sin emisiones, media/mediana, correcciones idempotentes por fecha de declaración y aislamiento/roles. Lecturas propias fuertes con proyección mínima; presupuesto compartido y `503 METRICS_LIMIT` sin agregado parcial. La demo preserva filtros 7/90 y rechaza `days` duplicado. Aceptada en development sobre el runtime `7dbffa9`: CI `44634469521` verde, 166 pruebas (101 backend/guardas, 63 web y dos de paquete), seis comprobaciones AWS y flujo completo de navegador con JWT real. Los datos y tiempos declarados de aceptación son sintéticos y automatizados; no acreditan productividad de usuarios humanos. [Resultado observado](../docs/verificacion.md).
+
+- **TEST-010** Preparación del piloto: enlaces locales y plantillas CSV coherentes, catorce IDs de casos únicos en estado No ejecutado, criterios con denominador, catálogo ficticio válido y cinco cálculos exactos contrastados con el motor actual. Revisión independiente de método, ayuda/abandono, sesgos, roles, cuotas UTC y separación entre práctica y cohorte. No sustituye ejecutar TASK-006.
 
 Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm run smoke:ssr`, `npm run pilot`, `cfn-lint infra/template.yaml`. Los resultados observados y las limitaciones se registran en [Verificación](../docs/verificacion.md).
 
@@ -75,6 +79,7 @@ Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm r
 | Demo y piloto | `tools/demo.mjs`, `tools/pilot.mjs` |
 | Métricas y correcciones del piloto | `services/quoting/domain/pilot-metrics.mjs`, `services/quoting/index.mjs`, `web/src/app/features/pilot/` |
 | Smoke de métricas en development | `tools/pilot-metrics-smoke.mjs` |
+| Piloto con personas: protocolo, casos y guía | `docs/piloto/` |
 | CI | `.github/workflows/ci.yml` |
 
 Se conserva Node.js 24, Angular 22 y NgRx Signals 22; los lockfiles fijan las dependencias. El hosting replica el patrón SSR del portafolio sin reutilizar sus stacks, pool de identidad ni dominios principales.
@@ -85,4 +90,4 @@ No se incluyen cobros/licencias automáticas, contratación de suscripciones, ex
 
 ## Primer pendiente para continuar desde remoto
 
-Ejecutar TASK-006 con clientes, personas y datos autorizados para contrastar precios, capacidades, costos y valor comercial. Registro, Equipo, límites operativos, avisos de consumo y métricas del piloto ya tienen aceptación técnica en development; esa evidencia sintética y automatizada no valida demanda, disposición a pagar, ahorro humano ni carga sostenida de Empresa. Las promociones autorizadas deben seguir únicamente PR development → testing → main. Stripe sigue pendiente, sin contratación ni cobros. Consultar [Verificación](../docs/verificacion.md) para el estado exacto de cada revisión y sus comprobaciones.
+Confirmar dos organizaciones del mismo sector, cuatro participantes y el catálogo mínimo autorizado de cada organización; acordar el facilitador, canal privado y fecha de inicio del [protocolo preparado](../docs/piloto/protocolo.md), y ejecutar TASK-006. La preparación documental de TASK-013 no significa que haya participantes inscritos o resultados humanos. Registro, Equipo, límites, avisos y métricas tienen aceptación técnica en development; esa evidencia sintética no valida demanda, disposición a pagar, ahorro humano ni carga sostenida de Empresa. Las promociones autorizadas siguen únicamente PR development → testing → main. Stripe continúa pendiente, sin contratación ni cobros. Consultar [Verificación](../docs/verificacion.md) para el estado de cada entrega.

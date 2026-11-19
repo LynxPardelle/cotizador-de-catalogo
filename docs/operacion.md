@@ -36,6 +36,12 @@ Desde la rama development, revisa el changeset para el stack de desarrollo antes
 
 El frontend empaquetado requiere `npm run build` antes de SAM. Su handler es `index.handler`, en `web/dist/lambda`; los adaptadores de servicios tienen handlers `catalog/index.handler`, `quoting/index.handler`, `team/index.handler` y `onboarding/index.handler`. El paquete de Web incluye el adaptador serverless y no necesita dependencias instaladas en el runtime de Lambda.
 
+## Preparar el piloto con personas
+
+El [protocolo de primeros usuarios](piloto/protocolo.md) define convocatoria, datos autorizados, calendario, casos y criterios de éxito. Usar su [guía de incorporación](piloto/guia-primeros-usuarios.md) y copiar las [plantillas vacías](piloto/plantillas/README.md) a la ubicación privada acordada fuera de Git. TASK-013 deja preparada esa documentación; TASK-006 sigue pendiente hasta observar personas y registrar resultados reales.
+
+El facilitador confirma dos espacios designados, dos miembros por espacio y una copia mínima de catálogo autorizada. No ejecutar scripts de preparación/cleanup sintético con cuentas de participantes: cada persona se registra y confirma su propio correo, y las invitaciones se comparten manualmente. Los resultados de la cohorte se separan de la práctica mediante el registro privado; el panel no ofrece filtro por cohorte ni una exportación de esos datos. Mantener las tareas medidas en v1 y pasar a los controles de v2 después. No se activa Stripe ni un cobro.
+
 ## Dar acceso al piloto
 
 La landing permite registrarse mediante Cognito con verificación de correo. La recepción del código y confirmación se comprobaron con dos correos reales en development. Al confirmar, el trigger asigna una organización propia y rol admin; no acepta organización ni rol del cliente. También inicializa el perfil y la pertenencia en `MembersTable`: se comprobó su persistencia antes de la primera consulta de contexto a Equipo. No reutilizar pools del portafolio. Las pruebas automatizadas pueden usar cuentas sintéticas con MessageAction=SUPPRESS, sin enviar correos; esa vía de pruebas se distingue de la comprobación de entrega real.

@@ -2,7 +2,25 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
-## Última entrega: métricas del piloto
+## Preparación del piloto con usuarios
+
+Preparada el 19/11/2026 en development, sin cambios de runtime. TASK-013 deja un [protocolo](piloto/protocolo.md), [catorce casos funcionales](piloto/casos-de-prueba.md), [guía para primeros usuarios](piloto/guia-primeros-usuarios.md), [catálogo ficticio de práctica](piloto/catalogo-practica.json) y [cuatro plantillas vacías](piloto/plantillas/README.md). TASK-006 sigue pendiente: no hay participantes convocados, inicio confirmado ni resultados humanos de esta cohorte.
+
+La propuesta define dos organizaciones del mismo sector y cuatro personas, catorce días desde la preparación de accesos y catálogos, y veinte pares de tareas frente al proceso habitual. Cada intento tiene un máximo de diez minutos. Los siete criterios de salida tienen denominadores explícitos; la meta de mejora del 20% es exploratoria. El tiempo de pared comparable se separa del tiempo activo del navegador y de las emisiones de práctica incluidas en el panel.
+
+Comprobaciones realizadas sobre esta entrega documental:
+
+- Catálogo JSON idéntico al fixture sintético actual y válido para el motor.
+- Cinco resultados de referencia, calculados de forma explícita en la matriz y contrastados con el motor: 4,500.00; 16,650.00; 21,375.00; 26,362.50 y 7,837.50 MXN. Esto valida el material ficticio, no resultados de participantes.
+- Catorce identificadores de caso únicos, todos en estado No ejecutado; siete criterios y cuatro CSV con sólo encabezados, sin registros de personas.
+- Enlaces locales y diferencias Git comprobados. No se instalaron dependencias ni se modificaron servicios, frontend, infraestructura o configuración.
+- Revisión independiente del método: primeros intentos, ayuda y abandonos; sesgo de aprendizaje y conocimiento previo del administrador; cobertura frente a pares comparables; roles/cupos y reinicio mensual UTC; datos privados fuera de Git.
+
+La revisión aclaró que los tiempos agotados o la ayuda no equivalen por sí solos a una pérdida de integridad, y que auditar un resultado no implica que coincida con la referencia. También separó la incorporación de las dos sesiones medidas. Los controles de precio, acceso y conservación siguen siendo críticos. Las fuentes metodológicas y los umbrales elegidos constan en el protocolo.
+
+Este paquete prepara la ejecución y una decisión de avanzar a otra cohorte controlada, iterar o detener para corregir; no constituye una publicación en producción ni validación de demanda o precio. Stripe permanece pendiente. El runtime de referencia y su aceptación AWS anterior se conservan a continuación; esta entrega no ejecuta un nuevo despliegue ni modifica otros proyectos.
+
+## Última entrega de runtime: métricas del piloto
 
 Runtime desplegado: **7dbffa9b9fdda31212be56a8e658e3d6f956dcda**, con SourceCommit coincidente y estado UPDATE_COMPLETE en cotitrama-development. La [CI del runtime](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44634469521) terminó correctamente. Los commits posteriores de evidencia no cambian el runtime.
 

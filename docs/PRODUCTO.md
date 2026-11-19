@@ -34,6 +34,12 @@ Los ajustes reflejan nuevas previsualizaciones exitosas de una configuración di
 
 Repetir una emisión o declaración con su referencia original no agrega muestras, eventos ni consumo. Las consultas tienen un presupuesto acotado y fallan explícitamente si el histórico lo supera, sin mostrar un total truncado. La [decisión de métricas](architecture/004-metricas-del-piloto.md) precisa captura, cobertura y límites. La instrumentación no completa el piloto humano de TASK-006, la validación de demanda ni la disposición a pagar. Stripe y la contratación automática continúan pendientes.
 
+## Piloto con primeros usuarios
+
+La preparación de TASK-013 está completa en el [protocolo del piloto](piloto/protocolo.md), con [casos funcionales](piloto/casos-de-prueba.md), [guía de incorporación](piloto/guia-primeros-usuarios.md) y [plantillas de registro privado](piloto/plantillas/README.md). La cohorte propuesta es de dos organizaciones, con administrador y vendedor por espacio, durante catorce días a partir de la preparación de accesos y datos. Todavía no se ha convocado ni ejecutado; TASK-006 continúa pendiente.
+
+La evaluación prevé veinte pares de tareas y criterios fijados antes de observar: exactitud comercial completa, integridad y aislamiento, autonomía, cobertura de observación, mejora exploratoria de tiempo y utilidad declarada. Contrasta el proceso habitual con el flujo completo de CotiTrama usando tiempo de pared, separado de la estimación de actividad del navegador. Los resultados de cuatro personas son exploratorios; no validan demanda de mercado, ahorro poblacional ni disposición a pagar. Stripe continúa pendiente.
+
 ## Origen
 
 Proyecto de origen propio basado en el problema comercial identificado en novo-calculator. Los contratos, nombres, datos de ejemplo y código son nuevos. No se reutiliza información comercial ajena.

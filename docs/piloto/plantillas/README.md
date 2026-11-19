@@ -1,0 +1,28 @@
+# Registro privado del piloto
+
+Estas plantillas contienen sólo encabezados y no son una exportación de la aplicación. Copiarlas a la ubicación privada acordada con el facilitador, fuera de Git, antes de completarlas. Usar códigos ORG-A/ORG-B y A1/A2/B1/B2; mantener la correspondencia con nombres/correos en otro registro privado. No incorporar datos reales a estos archivos del repositorio.
+
+- [Sesiones](sesiones.csv): una fila por intento y método. El par se identifica por cohorte + participante + tarea. Los veinte pares previstos deben existir aunque alguno quede no ejecutado. Para un método no ejecutado, dejar inicio/fin/segundos vacíos y escribir el estado correspondiente. Añadir las filas de práctica/control/opcional con sus clases propias; no sustituir el primer intento medido por una recuperación.
+- [Incidencias](incidencias.csv): una fila por incidencia observada. Una declaración dentro de CotiTrama y un error confirmado son campos distintos. Guardar referencias mínimas; nunca contraseñas, códigos de confirmación, enlaces de invitación o capturas con datos personales.
+- [Retroalimentación](retroalimentacion.csv): una fila por cada una de las cuatro personas, incluso si no responde. Registra si desea repetir y su razón, sin convertir una respuesta positiva en una intención de compra.
+- [Cierre](cierre.csv): una fila por criterio y organización o por el total de la cohorte. Registrar numerador, denominador, resultado y referencia privada de evidencia; no pegar todo el contenido sensible. La ausencia de datos se escribe sin datos, sin convertirla en cero éxitos ni cero errores.
+
+## Valores y reglas de captura
+
+En sesiones, `clase` usa practica/comparable/control/opcional; `metodo` usa habitual/cotitrama; `orden` es 1 o 2 en un par. `resultado` usa exito/fallo/abandono/no_ejecutado. `ayuda_antes_fin` usa si/no/no_aplica. Las recuperaciones asistidas posteriores se registran como control, con otra referencia de sesión. `interrupcion_invalidante` usa si/no; indicar el motivo con un código explicable en el registro privado.
+
+La clase comparable identifica una tarea preasignada de la muestra, incluso si falla o queda sin ejecutar; no implica que el par sea elegible para estimar tiempos. Aplicar las condiciones de par comparable del protocolo antes de incluirlo. `auditoria_completa` y `coincide_referencia` usan si/no/pendiente: la primera indica revisión completa; la segunda que configuración, opciones, cantidades, moneda, reglas, revisión, redondeo e importes coinciden. Un importe igual con otra configuración no es una coincidencia válida. No marcar exito si la auditoría detecta una diferencia.
+
+Registrar fechas como ISO UTC, por ejemplo el formato `AAAA-MM-DDTHH:mm:ss.sssZ`, y segundos como número con punto decimal. `tiempo_pared_segundos` es fin menos inicio, sin descontar las pausas registradas. No rellenar un tiempo si faltan observaciones. `tiempo_activo_ms` es la medición auxiliar del navegador cuando se puede verificar: vacío significa no disponible; cero es un valor válido. No inferir el tiempo individual desde la media del panel.
+
+`revision_referencia` identifica la hoja/versión de la solicitud y su resultado independiente, fijados antes de empezar. La revisión comercial debe ser la misma en ambos métodos del par. `importe_esperado_menor` e `importe_observado_menor` son enteros en unidades menores de la moneda (MXN 4,500.00 se anota 450000). La auditoría también verifica opciones, cantidades, reglas y moneda; un total coincidente por casualidad no basta.
+
+`propuesta_referencia_privada` guarda el identificador de propuesta CotiTrama o un alias del documento habitual. No usar una URL de autenticación ni datos del comprador. `periodo_utc` usa AAAA-MM para conciliar cuotas cuando el piloto cruza el día 1 UTC. La referencia de la emisión debe poder distinguir duplicados/replays sin contarlos como propuestas nuevas.
+
+En incidencias, `clase` distingue ejercicio_control/problema_inesperado; `categoria` usa cantidad/opciones/catalogo/precio_reglas/acceso/registro_correo/usabilidad/otro. `correccion_declarada_en_app` y `error_confirmado` usan si/no/pendiente; los problemas de acceso o registro pueden no tener propuesta asociada. `estado` usa abierto/en_revision/resuelto/no_reproducido. Un estado resuelto requiere evidencia de revisión, no sólo haber registrado la categoría en la app. Anotar asistencia o pérdidas de observación sin reconstruir un tiempo de memoria.
+
+En cierre, `criterio_id` usa EX-01..EX-07 del [protocolo](../protocolo.md); `resultado` usa cumple/no_cumple/sin_datos/no_evaluable y `decision` usa avanzar/iterar/detener/pendiente. Para un criterio sin razón numerador/denominador, dejarlos vacíos y documentar el valor observado en la evidencia privada. Las medianas globales y por persona se registran en el informe descriptivo privado junto con exclusiones, sin intentar obtenerlas de una razón de totales.
+
+En retroalimentación, `quiere_repetir` usa si/no/sin_respuesta. Registrar una razón concreta y la fricción principal en lenguaje de la persona, sin nombres de terceros. Una ausencia conserva sus campos de texto vacíos. Si se edita un CSV manualmente, encerrar en comillas dobles los textos que contengan comas o saltos de línea y duplicar las comillas dentro del texto; también puede completarse con una hoja de cálculo y exportarse como CSV.
+
+Antes de compartir un informe: comprobar las clases, los veinte pares y sus estados, las exclusiones, la coincidencia de referencias/versiones y la separación entre correcciones declaradas y errores auditados. Compartir únicamente agregados revisados, con la muestra de cuatro personas y dos organizaciones expresada claramente.
