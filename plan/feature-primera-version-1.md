@@ -27,19 +27,19 @@ El producto pasa de una base de salud a un flujo comercial reproducible. Se mant
 | Tarea | Alcance | Estado |
 | --- | --- | --- |
 | **TASK-001** Motor de reglas | `services/quoting/domain/price.mjs`: validación de revisiones, opciones/cantidades, prioridad, descuentos/recargos y redondeo. Casos sintéticos, límites e invariantes monetarias. | Verificada localmente (19/11/2026) |
-| **TASK-002** Catálogos y Cotizaciones | Handlers HTTP, repositorios de memoria/AWS, tablas independientes, contrato de lectura IAM, publicación condicional, snapshots e idempotencia transaccional. Pruebas de roles, aislamiento y reintentos. | Implementada y verificada localmente; aceptación AWS pendiente |
+| **TASK-002** Catálogos y Cotizaciones | Handlers HTTP, repositorios de memoria/AWS, tablas independientes, contrato de lectura IAM, publicación condicional, snapshots e idempotencia transaccional. Pruebas de roles, aislamiento y reintentos. | Verificada en AWS y navegador con JWT real (19/11/2026) |
 | **TASK-003** Flujo Angular y sesión | Catálogos, configuración, preview, emisión y reapertura; estados de carga/error/vigencia. PKCE, sesión expirable y roles UI. SSR y paquete Lambda con invocación local. | Verificada localmente (19/11/2026) |
 | **TASK-004** Piloto sintético | Catálogo de oficina con opciones, incompatibilidades y volumen; servidor demo loopback y carga pequeña reproducible con informe. | Piloto sintético verificado; piloto comercial pendiente |
-| **TASK-005** Microservicios y dominio en nube | SAM completo, Cognito, IAM mínimo, logs/retención, DynamoDB, CloudFront OAC y Route 53. Lint y CI. Despliegue development, smoke JWT/DDB/DNS y luego promociones. | SAM build, paquete y plantilla validados localmente; despliegue pendiente |
+| **TASK-005** Microservicios y dominio en nube | SAM completo, Cognito, IAM mínimo, logs/retención, DynamoDB, CloudFront OAC y Route 53. Lint y CI. Despliegue development, smoke JWT/DDB/DNS y luego promociones. | Development desplegado y verificado; testing/main pendientes |
 | **TASK-006** Piloto autorizado | Usuarios de prueba y catálogo del primer sector autorizados. Medir minutos/cotización, correcciones, reutilización de reglas y latencia AWS. Alarmas y presupuesto del ambiente. | Pendiente |
 
-Las pruebas locales permiten continuar autónomamente las primeras tareas. TASK-002 y TASK-005 no quedan aceptadas en nube hasta comprobar los servicios administrados en development. TASK-006 requiere evidencia real; un catálogo sintético no valida demanda ni ahorro comercial.
+TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrados y navegador autenticado. Testing y main conservan su puerta de promoción. TASK-006 requiere evidencia real; un catálogo sintético no valida demanda ni ahorro comercial.
 
 ## Ampliación autorizada: sitio, registro y suscripciones
 
-- **TASK-007** Landing pública SSR, registro Cognito con PKCE y verificación de correo, organización propia por cuenta confirmada e idempotencia del alta. En verificación.
+- **TASK-007** Landing pública SSR, registro Cognito con PKCE y verificación de correo, organización propia por cuenta confirmada e idempotencia del alta. Implementada y verificada en AWS con cuentas QA; recepción de correo real pendiente.
 - **TASK-008** Diseño de tiers Esencial/Equipo/Empresa según capacidades existentes y ampliaciones; precios por definir. [Matriz comercial](../docs/planes-suscripcion.md). Stripe permanece pendiente por instrucción del usuario.
-- **TASK-009** Incorporar el trabajo en development, commit/push, validar CI y desplegar exclusivamente development. Ejecutar el flujo comercial con Cognito/HTTP API/DynamoDB y la URL pública, comprobar aislamiento y preservar los otros proyectos. En curso.
+- **TASK-009** Incorporar el trabajo en development, commit/push, validar CI y desplegar exclusivamente development. Ejecutar el flujo comercial con Cognito/HTTP API/DynamoDB y la URL pública, comprobar aislamiento y preservar los otros proyectos. Completada: commits/push, CI verde y development desplegado con aceptación AWS y navegador.
 
 ## Verificación y evidencia
 
@@ -74,4 +74,4 @@ No se incluyen cobros/licencias automáticas, exportación PDF, importaciones la
 
 ## Primer pendiente para continuar desde remoto
 
-Incorporar los cambios locales actuales en development conservando el trabajo y completar la aceptación con recursos AWS y usuarios autorizados. Después, medir el piloto y promover mediante PR development → testing → main. Consultar [Verificación](../docs/verificacion.md) para distinguir lo comprobado localmente de lo pendiente en nube.
+Ejecutar el piloto con personas y datos autorizados, confirmar entrega del correo de registro y definir límites/precios antes de contratar. Luego promover mediante PR development → testing → main. Stripe queda para una etapa posterior autorizada. Consultar [Verificación](../docs/verificacion.md) para distinguir lo comprobado localmente de lo pendiente en nube.

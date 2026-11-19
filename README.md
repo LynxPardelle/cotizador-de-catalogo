@@ -48,4 +48,4 @@ Angular SSR se sirve desde una Lambda detrás de CloudFront/OAC. Catálogos y Co
 | testing | testing | https://cotitrama-test.lynxpardelle.com |
 | production | main | https://cotitrama.lynxpardelle.com |
 
-Estas direcciones se describen en infraestructura; su configuración no significa que el producto ya esté desplegado. La carpeta y el remoto histórico `cotizador-de-catalogo` se conservan para mantener los accesos remotos.
+Development está desplegado y verificado en https://cotitrama-dev.lynxpardelle.com. Testing y producción siguen como destinos previstos, sin promoción. La raíz pública presenta el producto y abre el registro verificado de Cognito. [Evidencia AWS](docs/verificacion.md). La carpeta y el remoto histórico `cotizador-de-catalogo` se conservan para mantener los accesos remotos.

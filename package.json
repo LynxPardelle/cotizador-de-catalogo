@@ -11,6 +11,8 @@
     "build": "npm --prefix web run build && node tools/package-web.mjs",
     "demo": "node tools/demo.mjs",
     "smoke:ssr": "node tools/smoke-ssr.mjs",
+    "smoke:aws:development": "node --use-system-ca tools/aws-smoke.mjs --verify",
+    "cleanup:aws:development": "node --use-system-ca tools/aws-smoke.mjs --cleanup",
     "pilot": "node tools/pilot.mjs"
   }
 }

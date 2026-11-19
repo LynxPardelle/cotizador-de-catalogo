@@ -1,6 +1,6 @@
 # Verificación AWS de CotiTrama en development
 
-`node tools/aws-smoke.mjs --verify` prepara dos cuentas QA sintéticas y comprueba el flujo contra los recursos ya desplegados. Requiere AWS CLI, dependencias de `services/` y acceso IAM autorizado. El script acepta únicamente el stack `cotitrama-development`, región `us-east-1`, cuenta del certificado de `infra/environments.json` y origen `https://cotitrama-dev.lynxpardelle.com`.
+`node --use-system-ca tools/aws-smoke.mjs --verify` prepara dos cuentas QA sintéticas y comprueba el flujo contra los recursos ya desplegados. Requiere AWS CLI, dependencias de `services/` y acceso IAM autorizado. El script acepta únicamente el stack `cotitrama-development`, región `us-east-1`, cuenta del certificado de `infra/environments.json` y origen `https://cotitrama-dev.lynxpardelle.com`.
 
 Modos:
 
@@ -15,3 +15,5 @@ La comprobación de negocio invoca las Lambdas por IAM usando eventos HTTP API v
 Las cuentas administrativas de QA ya tienen el email marcado como verificado; esto permite probar el trigger por invocación IAM sin enviar mensajes. No se cambia la verificación obligatoria de email del registro público. No se auto-confirma ningún alta real.
 
 Si una comprobación falla, el archivo privado se conserva para continuar la prueba en navegador o ejecutar cleanup. No compartas ni agregues ese archivo al repositorio. Ejecuta cleanup al terminar la aceptación del navegador.
+
+En Windows se usa `--use-system-ca` para validar TLS con las autoridades de confianza del sistema, también cuando hay inspección HTTPS local. No se desactiva la validación de certificados. Los scripts npm `smoke:aws:development` y `cleanup:aws:development` incluyen esa opción.
