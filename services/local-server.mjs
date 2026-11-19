@@ -35,7 +35,7 @@ export async function createDemoServer() {
     if(req.method==='OPTIONS') {
       res.writeHead(204,{'access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS','access-control-allow-headers':'Content-Type,Idempotency-Key,Authorization,X-Organization-Id'});res.end();return;
     }
-    const path=new URL(req.url,'http://127.0.0.1').pathname;
+    const url=new URL(req.url,'http://127.0.0.1');const path=url.pathname;
     if(path==='/config.json' && req.method==='GET') {
       res.writeHead(200,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
       res.end(JSON.stringify({productName:'CotiTrama',apiBaseUrl:'/api/v1',demo:true}));return;
@@ -43,7 +43,7 @@ export async function createDemoServer() {
     let body='';
     try {
       for await(const chunk of req) {body+=chunk.toString();if(Buffer.byteLength(body)>200_000){res.writeHead(413);res.end();return;}}
-      const event={version:'2.0',rawPath:path,headers:req.headers,body:body||undefined,requestContext:{requestId:randomUUID(),http:{method:req.method},authorizer:{jwt:{claims:{sub:demoSubject,token_use:'access','cognito:groups':['org:demo:admin']}}}}};
+      const event={version:'2.0',rawPath:path,rawQueryString:url.search.slice(1),queryStringParameters:Object.fromEntries(url.searchParams),headers:req.headers,body:body||undefined,requestContext:{requestId:randomUUID(),http:{method:req.method},authorizer:{jwt:{claims:{sub:demoSubject,token_use:'access','cognito:groups':['org:demo:admin']}}}}};
       const response=path==='/health' || path==='/api/health' ? await health(event) : path.startsWith('/api/v1/team') ? await team(event) : path.startsWith('/api/v1/catalogs') ? await catalog(event) : await quoting(event);
       res.writeHead(response.statusCode,response.headers);res.end(response.body);
     } catch {

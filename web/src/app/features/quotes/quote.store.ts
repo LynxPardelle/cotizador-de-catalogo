@@ -6,14 +6,17 @@ import { Catalog, Preview, Quote, QuoteRequest } from '../../data/contracts';
 import { UsageContext } from '../../core/usage-context';
 import { WorkspaceContext } from '../../core/workspace-context';
 import { Auth } from '../../core/auth';
+import { configurationKey, PilotTracker } from './pilot-tracker';
 
 interface QuoteState { catalogs: Catalog[]; preview: Preview | undefined; quote: Quote | undefined; request: QuoteRequest | undefined; key: string; busy: boolean; error: string; errorCode: string; clock: number }
 
 export const QuoteStore = signalStore(
   withState<QuoteState>(() => ({ catalogs: [], preview: undefined, quote: undefined, request: undefined, key: '', busy: false, error: '', errorCode: '', clock: Date.now() })),
   withComputed((store) => ({ expired: computed(() => !!store.preview() && Date.parse(store.preview()!.validUntil) <= store.clock()) })),
-  withMethods((store, api = inject(CatalogApi), usage = inject(UsageContext), workspace = inject(WorkspaceContext), auth = inject(Auth)) => {
+  withMethods((store, api = inject(CatalogApi), usage = inject(UsageContext), workspace = inject(WorkspaceContext), auth = inject(Auth), tracker=inject(PilotTracker)) => {
     let generation = 0;
+    let issueRequest:QuoteRequest|undefined;
+    let issueScope='';let issueKey='';
     const scopeKey = () => `${workspace.sessionVersion()}:${workspace.activeOrganizationId()}`;
     const currentScope = (scope: string) => auth.available && scopeKey() === scope;
     return {
@@ -22,14 +25,21 @@ export const QuoteStore = signalStore(
       try { patchState(store, { catalogs: (await api.list()).catalogs }); } catch (error) { patchState(store, { error: apiMessage(error) }); }
       finally { patchState(store, { busy: false }); }
     },
-    invalidate() { generation++; patchState(store, { preview: undefined, request: undefined, quote: undefined, key: '', error: '', errorCode: '', busy: false }); },
+    interact(){tracker.interact();},
+    configurationEdited(request:QuoteRequest){tracker.configurationEdited(request);},
+    setActivityActive(active:boolean){tracker.setActive(active);},
+    resetPilot(){tracker.reset();},
+    invalidate() { generation++;issueRequest=undefined;issueScope='';issueKey=''; patchState(store, { preview: undefined, request: undefined, quote: undefined, key: '', error: '', errorCode: '', busy: false }); },
     async calculate(request: QuoteRequest) {
+      tracker.configurationEdited(request);
       const current = ++generation;
       const scope = scopeKey();
+      const retryKey=issueRequest&&issueScope===scope&&configurationKey(issueRequest)===configurationKey(request)?issueKey:'';
+      if(!retryKey){issueRequest=undefined;issueScope='';issueKey='';}
       patchState(store, { busy: true, error: '', errorCode: '', preview: undefined, quote: undefined, request: undefined, key: '' });
       try {
         const preview = await api.preview(request);
-        if (current === generation && currentScope(scope)) patchState(store, { preview, request: structuredClone(request), key: crypto.randomUUID() });
+        if (current === generation && currentScope(scope)) {tracker.previewSucceeded(request);patchState(store, { preview, request: structuredClone(request), key: retryKey||crypto.randomUUID() });}
       } catch (error) { if (current === generation && currentScope(scope)) patchState(store, { error: apiMessage(error) }); }
       finally { if (current === generation) patchState(store, { busy: false }); }
     },
@@ -38,7 +48,8 @@ export const QuoteStore = signalStore(
       if (Date.parse(store.preview()!.validUntil) <= Date.now()) { patchState(store, { error: 'El catálogo ha vencido. Selecciona una versión vigente.' }); return; }
       patchState(store, { busy: true, error: '', errorCode: '' });
       const current = ++generation; const scope = scopeKey();
-      try { const quote = await api.issue(store.request()!, store.key()); if (current === generation && currentScope(scope)) { patchState(store, { quote }); void usage.refresh(); } }
+      if(!issueRequest){const pilot=tracker.freeze();issueRequest={...structuredClone(store.request()!),...(pilot?{pilot}: {})};issueScope=scope;issueKey=store.key();}
+      try { const quote = await api.issue(issueRequest, issueKey); if (current === generation && currentScope(scope)) { patchState(store, { quote });tracker.reset();issueRequest=undefined;issueScope='';issueKey='';void usage.refresh(); } }
       catch (error) { if (current === generation && currentScope(scope)) { patchState(store, { error: apiMessage(error), errorCode: apiCode(error) }); if (apiCode(error) === 'PLAN_LIMIT_REACHED') void usage.refresh(); } }
       finally { if (current === generation) patchState(store, { busy: false }); }
     },
@@ -58,5 +69,6 @@ export const QuoteStore = signalStore(
         inject(DestroyRef).onDestroy(() => clearInterval(timer));
       }
     },
+    onDestroy(store){store.resetPilot();},
   }),
 );

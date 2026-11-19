@@ -43,8 +43,17 @@ export function httpHandler(operation) {
   };
 }
 export function quoteRequest(body) {
-  const allowed = ['catalogId','version','currency','items'];
+  const allowed = ['catalogId','version','currency','items','pilot'];
   if (Object.keys(body).some(key => !allowed.includes(key))) throw badRequest('La solicitud contiene campos desconocidos.');
   requireId(body.catalogId); versionNumber(body.version);
+  if(Object.hasOwn(body,'pilot') && !validPilot(body.pilot)) throw badRequest('La medición del flujo no es válida.');
   return body;
+}
+export const validUuid=value=>typeof value==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+export function validPilot(value) {
+  return !!value && typeof value==='object' && !Array.isArray(value)
+    && Object.keys(value).length===3 && Object.keys(value).every(key=>['flowId','activeDurationMs','adjustments'].includes(key))
+    && validUuid(value.flowId)
+    && Number.isSafeInteger(value.activeDurationMs) && value.activeDurationMs>=0 && value.activeDurationMs<=28_800_000
+    && Number.isSafeInteger(value.adjustments) && value.adjustments>=0 && value.adjustments<=1000;
 }

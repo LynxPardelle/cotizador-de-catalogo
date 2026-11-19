@@ -2,6 +2,8 @@
 
 Microservicios serverless en AWS, con Angular SSR alojado en Lambda. La base comercial, el registro con correo real y el núcleo de Equipo con su tabla propia de pertenencias están desplegados y verificados en development. La aceptación de Equipo incluye transacciones reales y navegador con JWT, con cambio y retirada de permisos efectivos sin esperar a renovar el token. Las revisiones de cada entrega y sus comprobaciones se registran en [Verificación](../verificacion.md). Testing y producción conservan sus puertas de promoción.
 
+El incremento de métricas del piloto está implementado y verificado localmente; su aceptación AWS y de navegador está **en validación**. Reutiliza el servicio y la tabla de Cotizaciones, sin un nuevo dominio, tabla ni índice global.
+
 ```mermaid
 flowchart LR
   Browser[Angular hidratado] --> CDN[CloudFront + TLS + Route 53]
@@ -28,7 +30,7 @@ flowchart LR
 | Web | SSR público, assets, configuración pública y navegación Angular | Sin acceso a tablas de negocio. Function URL IAM sólo invocable por CloudFront OAC. |
 | Equipo e identidad | Pertenencias, contexto de organización, invitaciones y roles | `MembersTable` propia; consulta del pool Cognito propio para correo verificado y migración. Equipo y el trigger de incorporación son entradas del mismo dominio de identidad. |
 | Catálogos | Publicación de revisiones, listado y lectura | Tabla propia e invocación IAM de Equipo para autorizar. Publicación condicional; una revisión publicada no se edita. |
-| Cotizaciones | Motor determinista, simulación, emisión y consulta de snapshots | Tabla propia, autorización mediante Equipo e invocación de lectura de Catálogos. Sin acceso directo a sus tablas. |
+| Cotizaciones | Motor determinista, simulación, emisión, snapshots, métricas del piloto y correcciones declaradas | Tabla propia, autorización mediante Equipo e invocación de lectura de Catálogos. Sin acceso directo a sus tablas. |
 | Salud | Respuesta técnica de disponibilidad de la función | Sin datos de negocio; no acredita salud de dependencias. |
 
 Las funciones comparten utilidades de contrato, pero se ejecutan con roles separados. El monorepo no convierte los dominios en un único proceso. Catálogos y Cotizaciones no leen tablas de otros dominios: usan contratos de Lambda con permisos IAM. Equipo y el trigger de incorporación inicializan la tabla que pertenece a su propio dominio de identidad. En esta primera versión un stack SAM coordina los recursos; separar despliegues de dominio se puede realizar conservando los contratos.
@@ -65,9 +67,11 @@ El administrador genera un enlace manual dirigido a un correo y rol. El token al
 | GET /api/v1/catalogs | Catálogos publicados de la organización, revisión más reciente. |
 | GET /api/v1/catalogs/{catalogId}/versions/{version} | Revisión exacta e inmutable. |
 | POST /api/v1/catalogs/{catalogId}/publications | Publicación condicional de una revisión validada. |
-| POST /api/v1/quotes/preview | Desglose determinista y reglas aplicadas. |
-| POST /api/v1/quotes | Emisión con cabecera Idempotency-Key y snapshot inmutable. |
+| POST /api/v1/quotes/preview | Desglose determinista y reglas aplicadas; no agrega una muestra del piloto. |
+| POST /api/v1/quotes | Emisión con Idempotency-Key, snapshot inmutable y medición `pilot` opcional. |
 | GET /api/v1/quotes/{quoteId} | Consulta de la propuesta conservada. |
+| GET /api/v1/quotes/metrics?days=7\|30\|90 | Agregados del piloto en la organización; requiere admin y usa 30 días por defecto. |
+| POST /api/v1/quotes/{quoteId}/corrections | Declaración por categoría, idempotente; requiere admin o seller. No edita el snapshot ni consume cuota. |
 | GET /api/v1/team/context | Pertenencias actuales y organización seleccionada disponible. |
 | GET /api/v1/team/members | Miembros del espacio; requiere admin. |
 | POST /api/v1/team/invitations | Invitación por correo/rol y token para compartir manualmente; requiere admin. |
@@ -80,11 +84,25 @@ El catálogo declara moneda, exponente, vigencia y redondeo. El motor usa BigInt
 
 La tabla de propuestas conserva el snapshot y la clave de idempotencia en una transacción condicional. Repetir el mismo contenido devuelve el resultado original; reutilizar la clave con otro contenido produce 409. La emisión no altera su resultado cuando se publica otra revisión.
 
+### Medición, correcciones y privacidad
+
+`QuoteRequest` admite `pilot` opcional con tres campos obligatorios cuando está presente: `flowId` UUID, `activeDurationMs` entero entre 0 y 28,800,000, y `adjustments` entero entre 0 y 1,000. Campos desconocidos o valores inválidos producen 400. Preview acepta la medición pero conserva la misma respuesta comercial. El hash idempotente comercial excluye `pilot`: el primer intento confirmado guarda su medición con el snapshot y la cuota en la misma transacción; otro `pilot` válido no sustituye ese dato al reintentar.
+
+El servidor deriva una clave de emisor con SHA-256 de la organización y el sujeto autenticado. Se guarda como atributo privado del ítem de propuesta, fuera del snapshot que devuelve la API. El agregado sólo devuelve cuentas distintas y cuántas emisiones carecen de ese dato desde la instrumentación. No devuelve claves seudónimas, sujetos, correos, identificadores de flujo ni precios.
+
+La declaración de corrección acepta únicamente `correctionId` UUID y `reason` de la lista `quantity`, `options`, `catalog`, `pricing`, `other`. La transacción guarda `CORRECTION#<fecha>#<propuesta>#<id>` e `IDEMCORRECTION#<propuesta>#<id>` y comprueba la existencia de la propuesta en la organización. Los prefijos quedan fuera de `QUOTE#`, por lo que no alteran el contador de emisiones. La primera solicitud devuelve 201; un replay conserva fecha y categoría con 200; cambiar la categoría para la misma referencia devuelve 409. Una propuesta ajena devuelve 404 y un lector recibe 403. La declaración no acredita resolución ni cambia los importes.
+
+Las métricas usan días calendario UTC, desde medianoche del primer día hasta medianoche de mañana como extremo exclusivo, e incluyen `asOf`. Se devuelven `totalIssued`, `activeIssuers`, `missingIssuerCount`, muestra/ausentes/media/mediana de tiempo, ajustes, correcciones por categoría y serie diaria con ceros explícitos. Tiempo y ajustes se calculan sólo desde `pilot` válido; las emisiones históricas sin medición siguen formando parte del total. Una muestra vacía produce medias y medianas nulas. Las correcciones se filtran por su propia fecha de registro, independientemente de la fecha de emisión.
+
+El repositorio consulta todas las páginas `QUOTE#` de la partición autorizada, proyectando sólo `quoteId`, `issuedAt`, `pilot` y la clave privada de emisor. Las correcciones se consultan por rango temporal de `CORRECTION#`, también con proyección mínima. No hay Scan global. Ambas consultas comparten un presupuesto de **100 páginas, 30,000 registros y seis segundos**, comprobado antes y después de cada lectura. Excederlo devuelve `503 METRICS_LIMIT` sin un agregado parcial; no interrumpe una llamada SDK que ya está en curso. Las fechas históricas inválidas producen un fallo explícito en lugar de un falso cero.
+
+Este diseño de piloto no garantiza consultar 90 días de cualquier historial de Empresa. Antes de ampliar volumen se necesitan mediciones y una estrategia temporal o agregados con migración completa que conserven los históricos sin instrumentación. El panel `/piloto` sólo se carga en navegador para administradores; miembros, catálogos y cuota mensual actuales provienen de sus APIs de consumo y no se presentan como promedios del período. Las [definiciones de medición](004-metricas-del-piloto.md) separan tiempo estimado, ajustes y correcciones declaradas.
+
 ## Operación y límites
 
 DynamoDB bajo demanda, cifrado, recuperación a un punto en el tiempo y retención de tablas al eliminar el stack. Logs con 14 días de retención; nunca registrar payloads comerciales ni tokens. HTTP API limita el caudal. Los recursos se aíslan por stack y ambiente; la elevación sigue development → testing → main.
 
-La demo en loopback usa datos sintéticos y repositorios en memoria, separados de los adaptadores AWS. Las pruebas locales no sustituyen la comprobación de IAM, JWT, condiciones/transacciones DynamoDB y DNS/TLS en development. Los tiempos de usuarios, correcciones y reutilización de reglas requieren un piloto autorizado. Exportación asíncrona/SQS e importaciones largas/Step Functions quedan fuera del primer flujo.
+La demo en loopback usa datos sintéticos y repositorios en memoria, separados de los adaptadores AWS; conserva los filtros de consulta y valida sus duplicados. Las pruebas locales no sustituyen la comprobación de IAM, JWT, condiciones/transacciones DynamoDB y DNS/TLS en development. La instrumentación del piloto es técnica: sus métricas sintéticas no acreditan tiempos humanos, ahorro, errores resueltos o reutilización de reglas. Esa evidencia corresponde a TASK-006 con personas y datos autorizados. Exportación asíncrona/SQS e importaciones largas/Step Functions quedan fuera del primer flujo.
 
 ## Referencias
 

@@ -18,6 +18,7 @@ import { UsageContext } from '../core/usage-context';
         <a routerLink="/catalogos" routerLinkActive="active">Catálogos</a>
         <a routerLink="/equipo" routerLinkActive="active">Equipo</a>
         <a routerLink="/consumo" routerLinkActive="active">Consumo</a>
+        @if(auth.available&&auth.role==='admin'){<a routerLink="/piloto" routerLinkActive="active">Piloto</a>}
       </nav>
       <div class="session-actions">
         @if (config.settings().demo) { <span class="demo-label">Demostración</span> }

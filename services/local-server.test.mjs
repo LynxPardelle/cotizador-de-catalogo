@@ -19,3 +19,15 @@ test('local demo exposes only synthetic catalog and preserves emitted quote afte
   const get=await fetch(`${base}/api/v1/quotes/${quote.quoteId}`);
   assert.deepEqual(await get.json(),quote);
 });
+
+test('local demo preserves metrics query windows and rejects duplicate days values',async(t)=>{
+  const server=await module.createDemoServer();
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const base=`http://127.0.0.1:${server.address().port}`;
+  for(const days of [7,90]) {
+    const response=await fetch(`${base}/api/v1/quotes/metrics?days=${days}`);assert.equal(response.status,200);
+    const metrics=await response.json();assert.equal(metrics.window.days,days);assert.equal(metrics.daily.length,days);
+  }
+  assert.equal((await fetch(`${base}/api/v1/quotes/metrics?days=7&days=90`)).status,400);
+});

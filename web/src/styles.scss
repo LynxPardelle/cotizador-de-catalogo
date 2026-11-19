@@ -288,3 +288,41 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; white-spa
 .archived-catalog .muted { font-size: .75rem; }
 @media (max-width: 850px) { .usage-banner { padding-inline: 1.25rem; flex-wrap: wrap; gap: .4rem 1rem; } .usage-indicator { padding-right: 1.2rem; } .usage-indicator + .usage-indicator { padding-left: 1.2rem; } }
 @media (max-width: 600px) { .usage-indicators { grid-template-columns: 1fr; } .usage-indicator { padding: 1.5rem 0; } .usage-indicator + .usage-indicator { border-left: 0; border-top: 1px solid var(--line); padding: 1.5rem 0; } .usage-amount strong { font-size: 2.4rem; } .usage-banner > span { flex-basis: 100%; } .catalog-status-actions { gap: .3rem 1rem; } }
+
+.pilot-filter { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem 1.5rem; padding: 1.3rem 0; border-block: 1px solid var(--line); margin-bottom: 1.3rem; }
+.pilot-filter label { margin-top: 0; font-size: .75rem; }
+.pilot-filter select { min-width: 190px; }
+.pilot-filter > .muted { margin-bottom: .8rem; font-size: .75rem; }
+.pilot-filter > button { margin-left: auto; }
+.pilot-window { font-size: .75rem; margin-bottom: 1.8rem; }
+.pilot-summary, .pilot-time { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+.pilot-summary { border-block: 1px solid var(--line); margin-block: 1.5rem 2.5rem; }
+.pilot-summary > div { padding: 1.5rem 1.5rem 1.5rem 0; }
+.pilot-summary > div + div { border-left: 1px solid var(--line); padding-left: 1.5rem; }
+.pilot-summary span, .pilot-time span { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .8rem; }
+.pilot-summary strong { display: block; font-size: 2.5rem; font-weight: 500; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.pilot-summary small { margin-top: .65rem; }
+.pilot-section { margin-block: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.pilot-section > h2 { margin-bottom: 1rem; }
+.pilot-section > p { font-size: .85rem; }
+.pilot-time { margin-block: 1.5rem; gap: 1.5rem; }
+.pilot-time strong { display: block; font-size: 1.8rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pilot-reasons { display: flex; flex-wrap: wrap; gap: .5rem 2rem; padding-block: 1rem; }
+.pilot-reasons > div { display: flex; align-items: baseline; gap: .8rem; font-size: .85rem; }
+.pilot-reasons > div > span { color: var(--muted); }
+.pilot-section .table-scroll { max-height: 34rem; overflow-y: auto; scrollbar-gutter: stable; }
+.pilot-section table { margin-top: 0; }
+.pilot-section thead { position: sticky; top: 0; background: var(--paper); z-index: 1; }
+.pilot-current { border-left: 3px solid #9daf8c; background: #edf0e4; padding: 1.5rem 1.8rem; margin-top: 3rem; }
+.pilot-current > p:not(.section-label) { color: var(--muted); font-size: .8rem; }
+.pilot-current dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1.5rem; margin-block: 1.5rem; }
+.pilot-current dt { font-size: .75rem; color: var(--muted); }
+.pilot-current dd { text-align: left; margin-top: .4rem; font-size: 1.1rem; }
+.correction-report { border-top: 1px solid var(--line); margin-top: 2rem; padding-top: 1.5rem; }
+.correction-report > h2 { font-size: 1.2rem; }
+.correction-report form { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .5rem 1rem; align-items: end; }
+.correction-report form label { grid-column: 1 / -1; margin-top: .3rem; }
+.correction-report form button { font-size: .85rem; min-height: 48px; }
+@media (min-width: 851px) and (max-width: 1100px) { .app-header { gap: 1.5rem; } .app-header nav { gap: 1.1rem; } }
+@media (max-width: 700px) { .pilot-summary { grid-template-columns: 1fr; } .pilot-summary > div { padding: 1.3rem 0; } .pilot-summary > div + div { border-left: 0; border-top: 1px solid var(--line); padding: 1.3rem 0; } .pilot-time { gap: 1rem; } .pilot-time strong { font-size: 1.35rem; } .pilot-current dl { grid-template-columns: 1fr; gap: 1rem; } .pilot-section .detail-heading { flex-wrap: wrap; } }
+@media (max-width: 540px) { .app-header nav { gap: .8rem; font-size: .8rem; flex-wrap: wrap; } .pilot-filter > button { margin-left: 0; } .pilot-time { grid-template-columns: 1fr; } .pilot-filter select { min-width: 170px; } .pilot-current { padding: 1.2rem; } .correction-report form { grid-template-columns: 1fr; } .correction-report form button { margin-top: .5rem; } }

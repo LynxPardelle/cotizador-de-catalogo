@@ -151,4 +151,11 @@ describe('CotiTrama', () => {
     [...page.querySelectorAll<HTMLButtonElement>('button')].find(button=>button.textContent?.trim()==='Sí, archivar')!.click();await harness.fixture.whenStable();
     expect(status).toHaveBeenCalledWith('first',false);expect(page.textContent).toContain('Catálogos archivados');expect(page.textContent).toContain('Sus versiones y propuestas se conservan');
   });
+  it.each(['reader','seller'])('does not request pilot metrics for a %s',async(role)=>{
+    TestBed.configureTestingModule({providers:[provideRouter(routes),provideHttpClient(),{provide:Auth,useValue:{available:true,role,busy:()=>false,error:()=>'',logout:vi.fn()}}]});
+    const harness=await RouterTestingHarness.create('/piloto');await harness.fixture.whenStable();
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent).toContain('Piloto');
+    expect(harness.routeNativeElement!.textContent).toContain('Solo los administradores');
+    expect(harness.routeNativeElement!.querySelector('nav a[href="/piloto"]')).toBeNull();
+  });
 });

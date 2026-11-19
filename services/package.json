@@ -8,6 +8,7 @@
     "onboarding/index.mjs",
     "quoting/index.mjs",
     "quoting/domain/price.mjs",
+    "quoting/domain/pilot-metrics.mjs",
     "shared/auth.mjs",
     "shared/dynamo.mjs",
     "shared/errors.mjs",

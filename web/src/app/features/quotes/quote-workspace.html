@@ -10,7 +10,7 @@
     @if (catalog(); as catalog) {
       <div class="quote-layout">
         <section class="configuration" aria-labelledby="config-title"><div class="section-label">01 · Configuración</div><h2 id="config-title">Productos y opciones</h2>
-          <form (submit)="calculate($event)">
+          <form (submit)="calculate($event)" (input)="configurationEdited()" (change)="configurationEdited()" (pointerdown)="store.interact()" (keydown)="store.interact()">
             <label for="catalog">Catálogo publicado</label><select id="catalog" [value]="catalog.catalogId" (change)="chooseCatalog($any($event.target).value)" [disabled]="store.busy()">@for (item of store.catalogs(); track item.catalogId) { <option [value]="item.catalogId">{{ item.name }} · v{{ item.version }}</option> }</select>
             <label for="product">Producto</label><select id="product" [value]="model().productId" (change)="chooseProduct($any($event.target).value)" [disabled]="store.busy()">@for (item of catalog.products; track item.id) { <option [value]="item.id">{{ item.name }}</option> }</select>
             <div class="quantity-row"><div><label for="quantity">Cantidad</label><input id="quantity" type="number" step="1" [formField]="fields.quantity" aria-describedby="quantity-help"></div><p id="quantity-help" class="muted">Unidades enteras, de 1 a 10,000.<br>Las reglas se calculan al revisar.</p></div>

@@ -22,7 +22,17 @@ La propuesta es una suscripción mensual por organización y equipo comercial. *
 
 Los planes están en preparación. El piloto continúa sin cargos; crear una cuenta no activa una suscripción. La contratación automática y Stripe quedan pendientes. La [propuesta comercial detallada](planes-suscripcion.md) distingue capacidades actuales, ampliaciones y controles necesarios, además de referencias de mercado y escenarios de costo con supuestos explícitos.
 
-Medir minutos por cotización, correcciones por error de precio y porcentaje de reglas reutilizadas entre catálogos antes de fijar precios o afirmar ahorro. Las mediciones con personas y datos autorizados siguen pendientes; los datos de demostración son sintéticos. Las capacidades por plan se aplican en backend durante el piloto y `/consumo` avisa desde el 80% y al agotarse. Las propuestas emitidas conservan sus snapshots al publicar otra versión y no se borran por cambiar de plan. Los espacios nuevos usan Esencial; Equipo y Empresa se asignan por el operador sin activar cobros.
+Medir tiempos de cotización, correcciones y reutilización de reglas con personas y datos autorizados antes de afirmar ahorro o validar la propuesta comercial. Esas mediciones siguen pendientes; los datos de demostración son sintéticos. Las capacidades por plan se aplican en backend durante el piloto y `/consumo` avisa desde el 80% y al agotarse. Las propuestas emitidas conservan sus snapshots al publicar otra versión y no se borran por cambiar de plan. Los espacios nuevos usan Esencial; Equipo y Empresa se asignan por el operador sin activar cobros.
+
+## Instrumentación del piloto
+
+La instrumentación está implementada y verificada localmente; su aceptación en AWS y navegador está **en validación**. El administrador consulta `/piloto` para el espacio seleccionado, en períodos de 7, 30 o 90 días calendario UTC que incluyen hoy. El panel muestra emisiones por día y cuentas emisoras medidas sin revelar su identidad. El plan, los miembros actuales, los catálogos activos y el consumo mensual son una fotografía actual, distinta del historial elegido.
+
+El tiempo es una estimación de actividad que comunica el navegador durante la configuración, no una medida completa de la jornada comercial ni una prueba de productividad humana. La media y la mediana usan sólo propuestas instrumentadas y se presentan junto al tamaño de muestra y las mediciones ausentes. Una duración reportada de cero es una muestra válida; las propuestas antiguas sin datos de tiempo se conservan en el total y no reciben una duración inventada.
+
+Los ajustes reflejan nuevas previsualizaciones exitosas de una configuración distinta dentro del mismo flujo. No acreditan un error de precio. Después de emitir, un vendedor o administrador puede declarar una corrección por cantidad, opciones, catálogo, precio/reglas u otra categoría. No hay notas libres. La declaración conserva la propuesta original y no acredita que se haya resuelto el problema o emitido otra propuesta. Se cuentan eventos y propuestas afectadas por fecha de declaración, incluso cuando la emisión ocurrió antes del período; no se calcula una tasa con un denominador ambiguo.
+
+Repetir una emisión o declaración con su referencia original no agrega muestras, eventos ni consumo. Las consultas tienen un presupuesto acotado y fallan explícitamente si el histórico lo supera, sin mostrar un total truncado. La [decisión de métricas](architecture/004-metricas-del-piloto.md) precisa captura, cobertura y límites. La instrumentación no completa el piloto humano de TASK-006, la validación de demanda ni la disposición a pagar. Stripe y la contratación automática continúan pendientes.
 
 ## Origen
 

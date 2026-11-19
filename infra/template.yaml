@@ -540,6 +540,18 @@ Resources:
             ApiId: !Ref ProductApi
             Path: /api/v1/quotes/usage
             Method: GET
+        PilotMetrics:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/quotes/metrics
+            Method: GET
+        ReportCorrection:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/quotes/{quoteId}/corrections
+            Method: POST
         IssueQuote:
           Type: HttpApi
           Properties:

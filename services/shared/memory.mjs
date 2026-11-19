@@ -1,11 +1,14 @@
 import { conflict, notFound } from './errors.mjs';
 import { hash } from './http.mjs';
 import { quotaExceeded, usageMetric, monthlyPeriod } from './quota.mjs';
+import { summarizePilotMetrics } from '../quoting/domain/pilot-metrics.mjs';
 
 export function createMemoryRepositories() {
   const catalogs = new Map();
   const quotes = new Map();
   const replay = new Map();
+  const quoteActors = new Map();
+  const corrections = new Map();
   const catalogHeads = new Map();
   const copy = value => value === undefined ? undefined : structuredClone(value);
   const listing = org => {
@@ -44,6 +47,19 @@ export function createMemoryRepositories() {
       },
     },
     quotes: {
+      async metrics(org,window) {
+        const records=[...quotes].filter(([key])=>key.startsWith(`${org}/`)).map(([key,quote])=>({quote,actorKey:quoteActors.get(key)}));
+        const events=[...corrections].filter(([key])=>key.startsWith(`${org}/`)).map(([,record])=>record.correction);
+        return summarizePilotMetrics(records,events,window);
+      },
+      async reportCorrection(org,quoteId,correction) {
+        if(!quotes.has(`${org}/${quoteId}`)) throw notFound();
+        const key=`${org}/${quoteId}/${correction.correctionId}`;
+        const requestHash=hash({quoteId,correctionId:correction.correctionId,reason:correction.reason});
+        const existing=corrections.get(key);
+        if(existing) {if(existing.requestHash!==requestHash) throw conflict();return {correction:copy(existing.correction),created:false};}
+        corrections.set(key,{requestHash,correction:copy(correction)});return {correction:copy(correction),created:true};
+      },
       async usage(org,period) {return quoteUsed(org,period);},
       async get(org,id) { return copy(quotes.get(`${org}/${id}`)); },
       async findReplay(org,key,requestHash) {
@@ -52,7 +68,7 @@ export function createMemoryRepositories() {
         if (existing.requestHash !== requestHash) throw conflict();
         return copy(quotes.get(`${org}/${existing.quoteId}`));
       },
-      async issue(org,key,requestHash,quote,{limit,period=monthlyPeriod(new Date(quote.issuedAt))}={}) {
+      async issue(org,key,requestHash,quote,{limit,period=monthlyPeriod(new Date(quote.issuedAt)),actorKey}={}) {
         const replayKey = `${org}/${hash(key)}`;
         const existing = replay.get(replayKey);
         if (existing) {
@@ -61,6 +77,7 @@ export function createMemoryRepositories() {
         }
         capacity(quoteUsed(org,period),limit);
         quotes.set(`${org}/${quote.quoteId}`,copy(quote));
+        if(actorKey) quoteActors.set(`${org}/${quote.quoteId}`,actorKey);
         replay.set(replayKey,{requestHash,quoteId:quote.quoteId});
         return {quote:copy(quote),created:true};
       },

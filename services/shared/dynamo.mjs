@@ -4,20 +4,22 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 import { hash } from './http.mjs';
 import { conflict, HttpError, notFound } from './errors.mjs';
 import { quotaExceeded, usageMetric, monthlyPeriod } from './quota.mjs';
+import { summarizePilotMetrics } from '../quoting/domain/pilot-metrics.mjs';
 
 const documentClient = () => DynamoDBDocumentClient.from(new DynamoDBClient({}),{marshallOptions:{removeUndefinedValues:true}});
 const orgKey = org => `ORG#${org}`;
 const catalogKey = (id,version) => `CATALOG#${id}#VERSION#${String(version).padStart(9,'0')}`;
 const quoteKey = id => `QUOTE#${id}`;
 const replayKey = key => `IDEMPOTENCY#${hash(key)}`;
+const METRICS_BUDGET=Object.freeze({maxPages:100,maxRecords:30000,deadlineMs:6000});
 function requireTable(table) { if (!table) throw new Error('Missing required table configuration'); return table; }
 const headKey=id=>`HEAD#${id}`;
 const retryable=()=>new HttpError(409,'USAGE_BUSY','Otra operación actualizó el consumo. Vuelve a intentarlo con la misma solicitud.');
 const pause=attempt=>new Promise(resolve=>setTimeout(resolve,15*(attempt+1)+Math.floor(Math.random()*20)));
-async function queryItems(client,table,org,prefix) {
+async function queryItems(client,table,org,prefix,projection={}) {
   const items=[];let ExclusiveStartKey;
   do {
-    const page=await client.send(new QueryCommand({TableName:table,KeyConditionExpression:'PK = :pk AND begins_with(SK, :prefix)',ExpressionAttributeValues:{':pk':orgKey(org),':prefix':prefix},ConsistentRead:true,ExclusiveStartKey}));
+    const page=await client.send(new QueryCommand({TableName:table,KeyConditionExpression:'PK = :pk AND begins_with(SK, :prefix)',ExpressionAttributeValues:{':pk':orgKey(org),':prefix':prefix},ConsistentRead:true,ExclusiveStartKey,...projection}));
     items.push(...(page.Items ?? []));ExclusiveStartKey=page.LastEvaluatedKey;
   } while(ExclusiveStartKey);
   return items;
@@ -103,8 +105,10 @@ export function createCatalogRepository({client=documentClient(),table=process.e
   return repository;
 }
 
-export function createQuoteRepository({client=documentClient(),table=process.env.QUOTES_TABLE}={}) {
+export function createQuoteRepository({client=documentClient(),table=process.env.QUOTES_TABLE,metricsBudget=METRICS_BUDGET,metricsNow=()=>performance.now()}={}) {
   requireTable(table);
+  const metricsLimits={...METRICS_BUDGET,...metricsBudget};
+  if(Object.values(metricsLimits).some(value=>!Number.isSafeInteger(value) || value<1) || typeof metricsNow!=='function') throw new Error('Invalid internal metrics budget');
   const rawGet=async(org,SK)=>(await client.send(new GetCommand({TableName:table,Key:{PK:orgKey(org),SK},ConsistentRead:true}))).Item;
   async function ensureCounter(org,period) {
     const SK=`USAGE#${period.key}`;const current=await rawGet(org,SK);if(current) return countValue(current);
@@ -116,6 +120,56 @@ export function createQuoteRepository({client=documentClient(),table=process.env
   }
   const repository={
     usage:ensureCounter,
+    async metrics(org,window) {
+      const began=metricsNow();let pages=0,recordsRead=0,halted=false;
+      const limit=()=>{halted=true;return new HttpError(503,'METRICS_LIMIT','El histórico supera el tamaño de consulta del piloto. Solicita una revisión operativa.');};
+      const check=()=>{if(halted || metricsNow()-began>=metricsLimits.deadlineMs) throw limit();};
+      const readPage=async input=>{
+        check();if(pages>=metricsLimits.maxPages) throw limit();pages++;
+        const page=await client.send(new QueryCommand(input));
+        check();recordsRead+=(page.Items ?? []).length;if(recordsRead>metricsLimits.maxRecords) throw limit();return page;
+      };
+      const quotesPromise=(async()=>{
+        const records=[];let ExclusiveStartKey;
+        do {
+          const page=await readPage({TableName:table,KeyConditionExpression:'PK = :pk AND begins_with(SK, :prefix)',ExpressionAttributeValues:{':pk':orgKey(org),':prefix':'QUOTE#'},ProjectionExpression:'#quote.#quoteId, #quote.#issuedAt, #quote.#pilot, #actorKey',ExpressionAttributeNames:{'#quote':'quote','#quoteId':'quoteId','#issuedAt':'issuedAt','#pilot':'pilot','#actorKey':'actorKey'},ConsistentRead:true,ExclusiveStartKey});
+          records.push(...(page.Items ?? []));ExclusiveStartKey=page.LastEvaluatedKey;
+        } while(ExclusiveStartKey);
+        return records;
+      })();
+      const correctionsPromise=(async()=>{
+        const events=[];let ExclusiveStartKey;
+        do {
+          const page=await readPage({TableName:table,KeyConditionExpression:'PK = :pk AND SK BETWEEN :start AND :end',ExpressionAttributeValues:{':pk':orgKey(org),':start':`CORRECTION#${window.startsAt}`,':end':`CORRECTION#${window.endsAt}`},ProjectionExpression:'#correction.#quoteId, #correction.#reason, #correction.#reportedAt',ExpressionAttributeNames:{'#correction':'correction','#quoteId':'quoteId','#reason':'reason','#reportedAt':'reportedAt'},ConsistentRead:true,ExclusiveStartKey});
+          events.push(...(page.Items ?? []).map(item=>item.correction));ExclusiveStartKey=page.LastEvaluatedKey;
+        } while(ExclusiveStartKey);
+        return events;
+      })();
+      const [records,events]=await Promise.all([quotesPromise,correctionsPromise]);
+      check();const summary=summarizePilotMetrics(records,events,window);check();return summary;
+    },
+    async reportCorrection(org,quoteId,correction,attempt=0) {
+      const SK=`IDEMCORRECTION#${quoteId}#${correction.correctionId}`;
+      const requestHash=hash({quoteId,correctionId:correction.correctionId,reason:correction.reason});
+      const existing=await rawGet(org,SK);
+      if(existing) {if(existing.requestHash!==requestHash) throw conflict();return {correction:existing.correction,created:false};}
+      if(!await repository.get(org,quoteId)) throw notFound();
+      try {
+        await client.send(new TransactWriteCommand({TransactItems:[
+          {Put:{TableName:table,Item:{PK:orgKey(org),SK:`CORRECTION#${correction.reportedAt}#${quoteId}#${correction.correctionId}`,correction},ConditionExpression:'attribute_not_exists(PK)'}},
+          {Put:{TableName:table,Item:{PK:orgKey(org),SK,requestHash,correction},ConditionExpression:'attribute_not_exists(PK)'}},
+          {ConditionCheck:{TableName:table,Key:{PK:orgKey(org),SK:quoteKey(quoteId)},ConditionExpression:'attribute_exists(PK) AND attribute_exists(#quote)',ExpressionAttributeNames:{'#quote':'quote'}}},
+        ]}));
+        return {correction,created:true};
+      } catch(error) {
+        if(error.name!=='TransactionCanceledException') throw error;
+        const committed=await rawGet(org,SK);
+        if(committed) {if(committed.requestHash!==requestHash) throw conflict();return {correction:committed.correction,created:false};}
+        if(!await repository.get(org,quoteId)) throw notFound();
+        if(attempt>=4) throw new HttpError(409,'CORRECTION_BUSY','La corrección se está procesando. Vuelve a intentarlo con la misma referencia.');
+        await pause(attempt);return repository.reportCorrection(org,quoteId,correction,attempt+1);
+      }
+    },
     async get(org,id) {
       const result=await client.send(new GetCommand({TableName:table,Key:{PK:orgKey(org),SK:quoteKey(id)},ConsistentRead:true}));
       return result.Item?.quote;
@@ -128,12 +182,12 @@ export function createQuoteRepository({client=documentClient(),table=process.env
       if(!quote) throw new Error('Idempotency invariant violated');
       return quote;
     },
-    async issue(org,key,requestHash,quote,{limit,period=monthlyPeriod(new Date(quote.issuedAt))}={},attempt=0) {
+    async issue(org,key,requestHash,quote,{limit,period=monthlyPeriod(new Date(quote.issuedAt)),actorKey}={},attempt=0) {
       const prior=await repository.findReplay(org,key,requestHash);if(prior) return {quote:prior,created:false};
       await ensureCounter(org,period);
       try {
         await client.send(new TransactWriteCommand({TransactItems:[
-          {Put:{TableName:table,Item:{PK:orgKey(org),SK:quoteKey(quote.quoteId),quote},ConditionExpression:'attribute_not_exists(PK) AND attribute_not_exists(SK)'}},
+          {Put:{TableName:table,Item:{PK:orgKey(org),SK:quoteKey(quote.quoteId),quote,...(actorKey ? {actorKey} : {})},ConditionExpression:'attribute_not_exists(PK) AND attribute_not_exists(SK)'}},
           {Put:{TableName:table,Item:{PK:orgKey(org),SK:replayKey(key),quoteId:quote.quoteId,requestHash},ConditionExpression:'attribute_not_exists(PK) AND attribute_not_exists(SK)'}},
           countUpdate(table,org,`USAGE#${period.key}`,1,limit),
         ]}));
@@ -148,7 +202,7 @@ export function createQuoteRepository({client=documentClient(),table=process.env
             throw quotaExceeded(usageMetric(used,limit));
           }
         }
-        if(attempt>=4) throw retryable();await pause(attempt);return repository.issue(org,key,requestHash,quote,{limit,period},attempt+1);
+        if(attempt>=4) throw retryable();await pause(attempt);return repository.issue(org,key,requestHash,quote,{limit,period,actorKey},attempt+1);
       }
     },
   };

@@ -7,6 +7,7 @@ Cotizaciones que conservan sus reglas. Publica catálogos versionados, configura
 - [Decisión de producto y hosting](docs/architecture/002-cotitrama-producto.md)
 - [Plan y pendientes](plan/feature-primera-version-1.md)
 - [Planes propuestos y costos](docs/planes-suscripcion.md)
+- [Métricas del piloto y sus definiciones](docs/architecture/004-metricas-del-piloto.md)
 - [Operación y despliegue](docs/operacion.md)
 - [Promoción development → testing → main](docs/promocion.md)
 
@@ -22,6 +23,8 @@ npm run demo
 ```
 
 Abre http://127.0.0.1:4200. La demostración usa únicamente un catálogo sintético y almacenamiento en memoria. Se reinicia al cerrar el proceso; no es persistencia de producción. Permite publicar revisiones, previsualizar, emitir y reabrir propuestas. El servidor queda ligado a loopback.
+
+El panel `/piloto` permite revisar las emisiones y las mediciones de esa sesión local. Sus filtros de 7, 30 y 90 días usan días calendario UTC; el servidor de demostración conserva esos parámetros y rechaza períodos duplicados.
 
 Para trabajar sólo el frontend, `npm --prefix web start`; para probar el flujo completo usa la demostración anterior.
 
@@ -56,3 +59,11 @@ La recepción y confirmación del registro se comprobaron con dos correos reales
 ## Planes en preparación
 
 Esencial **$399 MXN/mes** propone 2 miembros, 2 catálogos activos y 100 propuestas mensuales; Equipo **$1,199** propone 8/10/1,000; Empresa **$3,499** propone 25/50/5,000. Los precios siguen en validación antes de impuestos y las capacidades operativas se aplican en backend, con fuente compartida en `services/shared/plans.json`. `/consumo` y la navegación avisan desde el 80% y al agotarse. Archivar catálogos o retirar miembros libera cupo sin borrar propuestas ni cuentas. Los espacios nuevos usan Esencial; el operador asigna Equipo/Empresa en el piloto sin cobros ni contratación. Stripe sigue pendiente. [Diseño de límites](docs/architecture/003-limites-y-consumo.md).
+
+## Medición del piloto
+
+La instrumentación y sus pruebas locales están implementadas; la aceptación de este incremento en AWS y navegador está **en validación**. `/piloto` está reservado a administradores y muestra únicamente el espacio autorizado. Incluye emisiones por día, cobertura de cuentas emisoras, media/mediana de tiempo activo estimado por el navegador, tamaño de muestra, mediciones ausentes, ajustes de configuración y correcciones declaradas. El uso actual de miembros, catálogos y cuota mensual se consulta por separado; no es un promedio del período.
+
+Las propuestas históricas sin medición siguen contando en las emisiones. Una muestra ausente no se convierte en cero minutos ni en un emisor identificado. Las correcciones se declaran por categoría, no modifican la propuesta ni acreditan que se haya resuelto un error de precio; tampoco consumen otra propuesta del plan. Los reintentos conservan el primer snapshot y su medición, sin añadir muestras o cuota.
+
+La consulta usa un presupuesto compartido de 100 páginas, 30,000 registros y seis segundos entre lecturas. Si se supera, devuelve `503 METRICS_LIMIT` sin un resultado parcial; este diseño no garantiza consultar 90 días de cualquier historial de Empresa. Las [definiciones y límites](docs/architecture/004-metricas-del-piloto.md) distinguen fixtures sintéticos, instrumentación y resultados con personas. El piloto humano autorizado de TASK-006 y Stripe siguen pendientes.
