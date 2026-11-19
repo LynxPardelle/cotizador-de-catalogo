@@ -47,4 +47,4 @@ jobs:
       - name: Validar CloudFormation y SAM
         run: |
           python -m pip install cfn-lint==1.60.1
-          cfn-lint infra/template.yaml
+          cfn-lint infra/template.yaml infra/artifacts.yaml
