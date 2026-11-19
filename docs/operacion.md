@@ -21,7 +21,7 @@ La demo se abre en http://127.0.0.1:4200, sólo en la máquina local, con datos 
 
 ## Preparar la nube
 
-El stack `infra/template.yaml` declara Web SSR, Catálogos, Cotizaciones, Equipo, Incorporación, Salud, HTTP API, Cognito, tres tablas propias por dominio, CloudFront OAC y aliases A/AAAA. Equipo y su tabla de pertenencias pertenecen al incremento pendiente de desplegar y aceptar en AWS; la base anterior ya está operativa en development. No hay recursos de demo en el stack. Requiere una zona pública existente de lynxpardelle.com y un certificado ACM en us-east-1 que cubra el subdominio de cada ambiente. Un wildcard `*.lynxpardelle.com` cubre los tres nombres previstos.
+El stack `infra/template.yaml` declara Web SSR, Catálogos, Cotizaciones, Equipo, Incorporación, Salud, HTTP API, Cognito, tres tablas propias por dominio, CloudFront OAC y aliases A/AAAA. Equipo y su tabla de pertenencias ya se desplegaron y verificaron en development, junto con la base comercial. La aceptación incluye condiciones/transacciones reales y operaciones con JWT en navegador. No hay recursos de demo en el stack. Requiere una zona pública existente de lynxpardelle.com y un certificado ACM en us-east-1 que cubra el subdominio de cada ambiente. Un wildcard `*.lynxpardelle.com` cubre los tres nombres previstos.
 
 Los identificadores de zona y certificado son parámetros del despliegue. `infra/environments.json` contiene los valores públicos comprobados mediante lecturas de AWS el 19 de noviembre de 2026: zona pública existente, certificado ISSUED para lynxpardelle.com y *.lynxpardelle.com, y nombres de stack/ambiente. Development ya publica su alias; no confundir la comprobación anterior a la creación del stack con el estado desplegado. Revalidar esos valores antes de ejecutar otro despliegue; no deben pegarse credenciales en archivos del repositorio. SAM CLI y cfn-lint son herramientas de operación, no dependencias del navegador.
 
@@ -38,13 +38,13 @@ El frontend empaquetado requiere `npm run build` antes de SAM. Su handler es `in
 
 ## Dar acceso al piloto
 
-La landing permite registrarse mediante Cognito con verificación de correo. La recepción del código y confirmación con correo real ya se comprobaron en development. Al confirmar, el trigger asigna una organización propia y rol admin; no acepta organización ni rol del cliente. En el incremento de Equipo también inicializa el perfil y la pertenencia en `MembersTable`. No reutilizar pools del portafolio. Las pruebas automatizadas pueden usar cuentas sintéticas con MessageAction=SUPPRESS, sin enviar correos; esa vía de pruebas se distingue de la comprobación de entrega real.
+La landing permite registrarse mediante Cognito con verificación de correo. La recepción del código y confirmación se comprobaron con dos correos reales en development. Al confirmar, el trigger asigna una organización propia y rol admin; no acepta organización ni rol del cliente. También inicializa el perfil y la pertenencia en `MembersTable`: se comprobó su persistencia antes de la primera consulta de contexto a Equipo. No reutilizar pools del portafolio. Las pruebas automatizadas pueden usar cuentas sintéticas con MessageAction=SUPPRESS, sin enviar correos; esa vía de pruebas se distingue de la comprobación de entrega real.
 
 El cliente usa Authorization Code + PKCE S256, state aleatorio y tokens con vencimiento. API Gateway valida issuer, audience y scope openid; las Lambdas exigen token_use de acceso. Catálogos y Cotizaciones consultan al servicio Equipo por IAM para comprobar pertenencia y rol actuales en DynamoDB. No se admite un token de identidad para operaciones comerciales. `X-Organization-Id` sólo solicita un espacio; el servidor comprueba acceso vigente y construye con él las claves comerciales. No autoriza el rol por los grupos de un JWT antiguo.
 
 ### Incorporar a un equipo
 
-Una vez desplegado y aceptado el incremento de Equipo:
+El núcleo de Equipo ya está aceptado en development. Para incorporar a una persona:
 
 1. El administrador abre `/equipo`, revisa miembros y crea una invitación con correo y rol admin, seller o reader.
 2. Comparte manualmente el enlace `/invitacion/<token>` con la persona destinataria. La aplicación no envía correos de invitación automáticamente. El enlace caduca a los siete días; no se guarda en notas públicas ni en Git.
@@ -80,7 +80,7 @@ Conservar artifacts y revisión validada de cada ambiente. Volver a desplegar un
 
 ## Límites actuales
 
-No se incluye facturación, exportación PDF, envío automático de invitaciones ni importación de catálogos grandes. Equipo, invitaciones manuales, selección entre organizaciones y migración inicial están implementados en el incremento; su aceptación AWS sigue pendiente. La validación local no acredita ese despliegue ni un piloto comercial concluido.
+No se incluye facturación, exportación PDF, envío automático de invitaciones ni importación de catálogos grandes. Equipo, invitaciones manuales, selección entre organizaciones y migración inicial están implementados y su núcleo se comprobó en AWS y navegador. Esa aceptación técnica no completa el piloto comercial ni valida precios o demanda; las revisiones y sus comprobaciones se mantienen en [Verificación](verificacion.md).
 
 Esencial $399, Equipo $1,199 y Empresa $3,499 MXN/mes son precios propuestos antes de impuestos. Sus límites 2/2/100, 8/10/1,000 y 25/50/5,000 expresan miembros/catálogos activos/propuestas mensuales para contrastar con el piloto. `config/plans.json` mantiene estado `proposal`, sin cobros ni cuotas de pago activas. Crear una cuenta no contrata un plan y el piloto continúa sin cargos. Stripe queda pendiente.
 

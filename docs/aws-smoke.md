@@ -19,3 +19,14 @@ Las cuentas administrativas de QA ya tienen el email marcado como verificado; es
 Si una comprobación falla, el archivo privado se conserva para continuar la prueba en navegador o ejecutar cleanup. No compartas ni agregues ese archivo al repositorio. Ejecuta cleanup al terminar la aceptación del navegador.
 
 En Windows se usa `--use-system-ca` para validar TLS con las autoridades de confianza del sistema, también cuando hay inspección HTTPS local. No se desactiva la validación de certificados. Los scripts npm `smoke:aws:development` y `cleanup:aws:development` incluyen esa opción.
+
+## Correo real de registro
+
+`tools/registration-smoke.mjs` comprueba por separado el alta pública sin confirmación administrativa. Está restringido al stack, cuenta y origen de desarrollo, y a un alias QA de Gmail con la marca `+cotitrama-qa-`. Utilizar únicamente un buzón autorizado para esta prueba.
+
+1. Ejecutar `node --use-system-ca tools/registration-smoke.mjs --start <alias-QA-autorizado>`. El helper genera una contraseña privada y exige el estado UNCONFIRMED.
+2. Leer el correo recibido para ese alias y guardar temporalmente su código como objeto JSON con clave `code` en `artifacts/registration-code-private.json`, sin imprimirlo ni incorporarlo a Git.
+3. Ejecutar `node --use-system-ca tools/registration-smoke.mjs --confirm`. Usa ConfirmSignUp real, elimina el código consumido y verifica CONFIRMED, email_verified, grupo propio y membresía administradora en DynamoDB con lectura consistente.
+4. Completar la comprobación de navegador necesaria y ejecutar `node --use-system-ca tools/registration-smoke.mjs --cleanup`. Elimina únicamente la cuenta registrada, su grupo vacío y el archivo privado; conserva el reporte sin contraseñas ni códigos.
+
+El resultado sin secretos se guarda en `artifacts/registration-verified.json`. No se sustituye la recepción del mensaje por AdminConfirmSignUp ni por marcar manualmente email_verified. La prueba requiere acceso actual al buzón y una entrega efectiva de Cognito; un resultado local de onboarding no acredita esa entrega.

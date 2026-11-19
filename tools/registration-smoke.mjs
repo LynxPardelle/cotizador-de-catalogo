@@ -55,6 +55,7 @@ async function main() {
       const { code } = await json(codeFile);
       assert.match(code, /^\d{6}$/);
       await client.send(new sdk.ConfirmSignUpCommand({ ClientId: state.clientId, Username: state.email, ConfirmationCode: code }));
+      await unlink(codeFile);
       const confirmed = await client.send(new sdk.AdminGetUserCommand({ UserPoolId: state.userPoolId, Username: state.email }));
       const attributes = Object.fromEntries(confirmed.UserAttributes.map((item) => [item.Name, item.Value]));
       assert.equal(confirmed.UserStatus, 'CONFIRMED');
@@ -78,7 +79,6 @@ async function main() {
         assert.equal(result.Item.member.email, state.email);
       } finally { database.destroy(); }
       await save(reportFile, { ...(await json(reportFile)), emailReceived: true, confirmed: true, statusAfter: confirmed.UserStatus, emailVerified: true, organizationAssigned: true, ownerMembershipPersisted: true, confirmedAt: new Date().toISOString(), method: 'Real SignUp, Gmail receipt, real confirmation code and Cognito PostConfirmation plus a strongly consistent DynamoDB membership read.' });
-      await unlink(codeFile);
       console.log('Real email confirmation passed; verified account and organization assigned.');
     } else {
       await client.send(new sdk.AdminDeleteUserCommand({ UserPoolId: state.userPoolId, Username: state.email }));

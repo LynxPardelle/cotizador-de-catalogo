@@ -51,7 +51,7 @@ Angular SSR se sirve desde una Lambda detrás de CloudFront/OAC. Catálogos y Co
 
 Development está desplegado y verificado en https://cotitrama-dev.lynxpardelle.com. Testing y producción siguen como destinos previstos, sin promoción. La raíz pública presenta el producto y abre el registro verificado de Cognito. [Evidencia AWS](docs/verificacion.md). La carpeta y el remoto histórico `cotizador-de-catalogo` se conservan para mantener los accesos remotos.
 
-La recepción y confirmación del correo real de registro ya se comprobaron en development. La nueva gestión visual de miembros, invitaciones manuales de siete días y selector entre organizaciones están implementados en el incremento de Equipo; su despliegue y aceptación AWS siguen pendientes. Las invitaciones requieren el correo verificado destinatario, persisten sólo el hash del token y no envían correo automáticamente. Las transacciones protegen al último administrador y la migración inicial no restaura pertenencias retiradas.
+La recepción y confirmación del registro se comprobaron con dos correos reales en development. El núcleo de Equipo está desplegado y verificado con servicios AWS y navegador autenticado: gestión de miembros, invitaciones manuales, aceptación al correo correcto, cambio entre espacios, aislamiento y retirada de permisos. Las invitaciones caducan a los siete días, persisten sólo el hash del token y no envían correo automáticamente. Las transacciones protegen al último administrador incluso con cambios concurrentes; la migración inicial no restaura pertenencias retiradas. Las revisiones y comprobaciones de cada entrega se registran en [Verificación](docs/verificacion.md).
 
 ## Planes en preparación
 
