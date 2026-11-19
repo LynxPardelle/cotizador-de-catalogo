@@ -40,6 +40,14 @@ La preparación de TASK-013 está completa en el [protocolo del piloto](piloto/p
 
 La evaluación prevé veinte pares de tareas y criterios fijados antes de observar: exactitud comercial completa, integridad y aislamiento, autonomía, cobertura de observación, mejora exploratoria de tiempo y utilidad declarada. Contrasta el proceso habitual con el flujo completo de CotiTrama usando tiempo de pared, separado de la estimación de actividad del navegador. Los resultados de cuatro personas son exploratorios; no validan demanda de mercado, ahorro poblacional ni disposición a pagar. Stripe continúa pendiente.
 
+## Convocatoria de organizaciones interesadas
+
+La [invitación del piloto](piloto/convocatoria.md) está redactada y no se ha enviado a terceros. El formulario público `/piloto/interes` está implementado; la aceptación de esta ampliación en AWS y navegador está **en validación**. Permite expresar interés sin crear cuenta, proporcionar un catálogo ni contratar una suscripción. La selección de las dos organizaciones del mismo sector se realiza después de revisar las solicitudes y coordinar con sus responsables; un recibo no confirma una plaza ni la fecha de inicio.
+
+La solicitud recoge nombre de organización, correo de contacto, sector, proceso actual, volumen aproximado y disponibilidad para dos participantes y las sesiones. Requiere autorización expresa para usar esos datos en la coordinación del piloto, con versión del aviso y fecha de aceptación guardadas por servidor. Los datos se mantienen en la tabla propia de Interés, con expiración TTL a 90 días y eliminación asíncrona; no se exponen en una consulta pública. El operador accede mediante IAM y exportación privada por referencia. No hay CRM, correo de respuesta, aceptación de participantes, alta de cuenta ni cobro automáticos. Los reintentos de la misma solicitud no duplican su registro.
+
+La invitación compartida, las solicitudes de organizaciones reales, las personas, el sector definitivo y las fechas continúan pendientes. Esta captura no completa TASK-006 ni valida demanda o disposición a pagar. Stripe permanece pendiente. El [diseño de convocatoria](architecture/005-convocatoria-e-interes.md) documenta el contrato, los límites y el tratamiento de la información.
+
 ## Origen
 
 Proyecto de origen propio basado en el problema comercial identificado en novo-calculator. Los contratos, nombres, datos de ejemplo y código son nuevos. No se reutiliza información comercial ajena.

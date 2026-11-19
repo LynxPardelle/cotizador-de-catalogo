@@ -10,6 +10,7 @@ Cotizaciones que conservan sus reglas. Publica catálogos versionados, configura
 - [Métricas del piloto y sus definiciones](docs/architecture/004-metricas-del-piloto.md)
 - [Protocolo del piloto con usuarios](docs/piloto/protocolo.md)
 - [Guía para primeros usuarios](docs/piloto/guia-primeros-usuarios.md)
+- [Convocatoria e invitación del piloto](docs/piloto/convocatoria.md)
 - [Operación y despliegue](docs/operacion.md)
 - [Promoción development → testing → main](docs/promocion.md)
 
@@ -46,7 +47,7 @@ cfn-lint infra/template.yaml
 
 ## Nube
 
-Angular SSR se sirve desde una Lambda detrás de CloudFront/OAC. Catálogos y Cotizaciones son servicios Lambda separados, con contratos y tablas DynamoDB propias. El incremento de Equipo añade una tercera tabla del dominio de identidad: los servicios consultan por IAM las pertenencias y roles actuales. Cognito y API Gateway verifican la identidad; los grupos antiguos del token no conceden permisos. El cliente puede seleccionar un espacio con `X-Organization-Id` únicamente si el servidor valida acceso.
+Angular SSR se sirve desde una Lambda detrás de CloudFront/OAC. Catálogos y Cotizaciones son servicios Lambda separados, con contratos y tablas DynamoDB propias. Equipo e Incorporación pertenecen al dominio de identidad y operan su tabla `MembersTable`; los servicios consultan por IAM las pertenencias y roles actuales. La convocatoria incorpora `InterestFunction` y `InterestTable`, separadas de identidad y del negocio: la plantilla declara siete Lambdas y cuatro tablas. Cognito y API Gateway verifican la identidad de las rutas protegidas; los grupos antiguos del token no conceden permisos. El cliente puede seleccionar un espacio con `X-Organization-Id` únicamente si el servidor valida acceso. La recepción pública de interés no crea una cuenta ni una organización.
 
 | Ambiente | Rama de promoción | Dirección prevista |
 | --- | --- | --- |
@@ -75,3 +76,11 @@ La consulta usa un presupuesto compartido de 100 páginas, 30,000 registros y se
 El [paquete del piloto](docs/piloto/protocolo.md) propone dos organizaciones y cuatro personas, catorce días desde que accesos y catálogos estén listos, y veinte pares de tareas frente al proceso habitual. Incluye [catorce casos funcionales](docs/piloto/casos-de-prueba.md), una [guía de incorporación](docs/piloto/guia-primeros-usuarios.md), un catálogo ficticio completo y [plantillas vacías de sesiones, incidencias, cierre y retroalimentación](docs/piloto/plantillas/README.md). La preparación está completa; no se han convocado ni medido participantes de esta cohorte.
 
 Los criterios distinguen integridad/aislamiento, coincidencia con referencias independientes, autonomía, cobertura, tiempos comparables y utilidad. La meta del 20% de mejora es exploratoria. La comparación usa tiempo de pared observado con el mismo inicio/final en ambos métodos; la media de actividad del panel mezcla práctica y otras emisiones, y no representa los veinte pares. Los registros completados se conservan fuera de Git. Stripe sigue pendiente, sin contratación ni cobros.
+
+## Convocatoria y formulario de interés
+
+La [invitación está redactada y no enviada](docs/piloto/convocatoria.md). El formulario público `/piloto/interes` y `POST /api/v1/pilot-interest` están implementados; la aceptación de esta entrega en AWS y navegador está **en validación**. Una organización puede expresar interés sin crear una cuenta y sin adjuntar un catálogo. El formulario recoge organización, correo, sector, proceso actual, volumen aproximado y disponibilidad para dos personas y las sesiones, con autorización expresa de contacto sobre el piloto. Enviarlo no confirma una plaza, fecha ni suscripción.
+
+El endpoint devuelve sólo un recibo `202` con referencia y estado; no publica respuestas ni consulta si un correo ya existe. Los reintentos idénticos conservan el recibo y no consumen otra plaza de recepción. La tabla propia guarda el consentimiento versionado y una fecha TTL a 90 días; la eliminación por TTL es asíncrona. La ruta limita el caudal y la transacción aplica un máximo de 200 solicitudes nuevas por día UTC. El operador revisa metadatos y exporta una solicitud concreta por IAM a un archivo privado, sin CRM, aceptación, correo o alta automáticos. [Diseño de captura y privacidad](docs/architecture/005-convocatoria-e-interes.md).
+
+Compartir la convocatoria, revisar organizaciones reales y confirmar sector, participantes y fecha siguen pendientes. TASK-006 y Stripe continúan pendientes; no hay contratación ni cobros.

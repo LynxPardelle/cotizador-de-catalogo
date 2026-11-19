@@ -365,6 +365,81 @@ Resources:
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
 
+  InterestTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
+  InterestLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  InterestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OwnInterestAndLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt InterestLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
+                Resource: !GetAtt InterestTable.Arn
+
+  InterestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../services/
+      Handler: interest/index.handler
+      Role: !GetAtt InterestRole.Arn
+      Environment:
+        Variables:
+          INTEREST_TABLE: !Ref InterestTable
+      LoggingConfig:
+        LogGroup: !Ref InterestLogGroup
+      Events:
+        SubmitInterest:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-interest
+            Method: POST
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 10000
+            Auth:
+              Authorizer: NONE
+            RouteSettings:
+              ThrottlingBurstLimit: 5
+              ThrottlingRateLimit: 2
+
   HealthLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -794,6 +869,22 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
 
+  InterestErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama pilot interest collection failures require investigation.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref InterestFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
 Outputs:
   PublicUrl:
     Value: !Sub
@@ -817,3 +908,7 @@ Outputs:
     Value: !Ref OnboardingFunction
   TeamFunctionName:
     Value: !Ref TeamFunction
+  InterestFunctionName:
+    Value: !Ref InterestFunction
+  InterestTableName:
+    Value: !Ref InterestTable

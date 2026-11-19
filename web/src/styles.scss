@@ -326,3 +326,48 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; white-spa
 @media (min-width: 851px) and (max-width: 1100px) { .app-header { gap: 1.5rem; } .app-header nav { gap: 1.1rem; } }
 @media (max-width: 700px) { .pilot-summary { grid-template-columns: 1fr; } .pilot-summary > div { padding: 1.3rem 0; } .pilot-summary > div + div { border-left: 0; border-top: 1px solid var(--line); padding: 1.3rem 0; } .pilot-time { gap: 1rem; } .pilot-time strong { font-size: 1.35rem; } .pilot-current dl { grid-template-columns: 1fr; gap: 1rem; } .pilot-section .detail-heading { flex-wrap: wrap; } }
 @media (max-width: 540px) { .app-header nav { gap: .8rem; font-size: .8rem; flex-wrap: wrap; } .pilot-filter > button { margin-left: 0; } .pilot-time { grid-template-columns: 1fr; } .pilot-filter select { min-width: 170px; } .pilot-current { padding: 1.2rem; } .correction-report form { grid-template-columns: 1fr; } .correction-report form button { margin-top: .5rem; } }
+
+/* Public pilot recruitment follows the product's existing paper and forest palette. */
+.interest-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1.2rem max(1.5rem,calc((100vw - 1120px) / 2)); border-bottom: 1px solid var(--line); background: var(--surface); }
+.interest-layout { display: grid; grid-template-columns: minmax(0,.95fr) minmax(0,1.05fr); gap: 5rem; width: min(1120px,calc(100% - 3rem)); margin: 0 auto; padding-block: 4rem 5rem; align-items: start; }
+.interest-intro { position: sticky; top: 2rem; }
+.interest-intro h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(2.3rem,4vw,3.5rem); font-weight: 500; letter-spacing: -.05em; line-height: 1.08; margin-bottom: 1.5rem; }
+.interest-intro > .lede { font-size: 1.05rem; line-height: 1.7; }
+.interest-expectations { margin-block: 2rem 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.interest-expectations > h2 { font-size: 1.1rem; }
+.interest-expectations > p { font-size: .9rem; color: var(--muted); }
+.interest-expectations dl { margin: 1.5rem 0 0; }
+.interest-expectations dl > div { padding-block: .9rem; border-top: 1px solid var(--line); }
+.interest-expectations dt { font-weight: 600; font-size: .9rem; }
+.interest-expectations dd { margin: .25rem 0 0; text-align: left; color: var(--muted); font-size: .85rem; }
+.interest-intro > .muted { font-size: .8rem; }
+.interest-form-area { padding-left: 2rem; border-left: 1px solid var(--line); min-width: 0; }
+.interest-form-area > h2 { font-size: 1.25rem; }
+.interest-form-area > .muted { font-size: .8rem; margin-bottom: 1.5rem; }
+.interest-fields-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.interest-fields-row label { min-height: 2.5rem; }
+.interest-form-area select { font-size: .9rem; }
+.interest-form-area .field-help, .interest-form-area .field-error { font-size: .75rem; margin: .4rem 0 .6rem; }
+.interest-form-area .field-help { color: var(--muted); }
+.interest-form-area .field-error { color: #9c302a; }
+.interest-privacy { background: #edf0e4; border-left: 3px solid #9daf8c; margin-top: 1.8rem; padding: 1.2rem; }
+.interest-privacy h3 { font-size: .85rem; margin-bottom: .6rem; }
+.interest-privacy p { font-size: .75rem; color: var(--muted); margin-bottom: .6rem; }
+.interest-privacy p:last-child { margin: 0; }
+.interest-consent { display: flex; align-items: flex-start; gap: .75rem; margin-block: 1.2rem 1.5rem; font-size: .8rem; font-weight: 400; }
+.interest-consent input { margin-top: .15rem; }
+.interest-form-note { margin: .8rem 0 0; color: var(--muted); font-size: .7rem; text-align: center; }
+.interest-retry-note { color: var(--muted); font-size: .8rem; }
+.interest-reference { border-block: 1px solid var(--line); padding-block: 1rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.interest-received h2 { font-size: 1.8rem; }
+.interest-received > p:not(.eyebrow) { font-size: .9rem; }
+.interest-received .button { margin-top: 1rem; }
+.interest-footer { display: flex; justify-content: space-between; gap: 1rem; padding: 1.5rem max(1.5rem,calc((100vw - 1120px) / 2)); border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
+.landing-pilot { display: grid; grid-template-columns: 1.3fr .7fr; align-items: center; gap: 4rem; padding-block: 4rem; border-top: 1px solid var(--line); }
+.landing-pilot h2 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(2rem,3.3vw,3rem); line-height: 1.1; font-weight: 500; }
+.landing-pilot p:not(.landing-kicker) { color: var(--muted); font-size: .9rem; max-width: 37rem; }
+.landing-pilot-action { justify-self: end; max-width: 19rem; }
+.landing-pilot-action p { margin: .8rem 0 0; font-size: .75rem!important; }
+@media (max-width: 950px) { .interest-layout { gap: 2.5rem; } .interest-form-area { padding-left: 1.5rem; } .interest-fields-row { grid-template-columns: 1fr; gap: 0; } .interest-fields-row label { min-height: 0; } }
+@media (max-width: 750px) { .interest-layout { grid-template-columns: 1fr; padding-top: 2.5rem; gap: 2rem; } .interest-intro { position: static; } .interest-form-area { border-left: 0; border-top: 1px solid var(--line); padding: 2rem 0 0; } .interest-intro h1 br { display: none; } .interest-expectations dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; } .landing-pilot { grid-template-columns: 1fr; gap: 1.5rem; } .landing-pilot-action { justify-self: start; max-width: 30rem; } }
+@media (max-width: 540px) { .interest-header { padding: 1rem 1.25rem; } .interest-header .brand { font-size: 1.2rem; } .interest-header > .text-link { font-size: .75rem; } .interest-layout { width: calc(100% - 2.5rem); } .interest-expectations dl { grid-template-columns: 1fr; gap: 0; } .interest-expectations dl > div { padding-block: .65rem; } .interest-footer { flex-direction: column; gap: .3rem; } .landing-header nav { flex-wrap: wrap; } }

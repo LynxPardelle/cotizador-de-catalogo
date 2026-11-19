@@ -4,6 +4,8 @@ Microservicios serverless en AWS, con Angular SSR alojado en Lambda. La base com
 
 El incremento de métricas del piloto está **desplegado y verificado en development con AWS y navegador autenticado mediante JWT real**. La aceptación del runtime `7dbffa9` usa fixtures sintéticos y actividad automatizada, sin acreditar productividad humana. Reutiliza el servicio y la tabla de Cotizaciones, sin un nuevo dominio, tabla ni índice global. Sus resultados están en [Verificación](../verificacion.md).
 
+La convocatoria y el formulario público de interés están implementados; la aceptación de esta entrega en AWS y navegador está **en validación**. La plantilla incorpora `InterestFunction` y su tabla propia `InterestTable`: siete Lambdas y cuatro tablas en total. Equipo e Incorporación siguen siendo entradas del mismo dominio de identidad y conservan `MembersTable`; Interés no puede leer ni modificar esa tabla, los catálogos o las propuestas.
+
 ```mermaid
 flowchart LR
   Browser[Angular hidratado] --> CDN[CloudFront + TLS + Route 53]
@@ -13,9 +15,11 @@ flowchart LR
   API --> Quote[Lambda Cotizaciones]
   API --> Health[Lambda Salud]
   API --> Team[Lambda Equipo e identidad]
+  API -->|POST público de interés| Interest[Lambda Interés del piloto]
   Catalog --> CDB[(DynamoDB Catálogos)]
   Quote --> QDB[(DynamoDB Propuestas)]
   Team --> MDB[(DynamoDB Pertenencias)]
+  Interest --> IDB[(DynamoDB Interés)]
   Catalog -->|autorizar pertenencia / IAM| Team
   Quote -->|autorizar pertenencia / IAM| Team
   Quote -->|contrato de lectura / Invoke IAM| Catalog
@@ -32,6 +36,7 @@ flowchart LR
 | Catálogos | Publicación de revisiones, listado y lectura | Tabla propia e invocación IAM de Equipo para autorizar. Publicación condicional; una revisión publicada no se edita. |
 | Cotizaciones | Motor determinista, simulación, emisión, snapshots, métricas del piloto y correcciones declaradas | Tabla propia, autorización mediante Equipo e invocación de lectura de Catálogos. Sin acceso directo a sus tablas. |
 | Salud | Respuesta técnica de disponibilidad de la función | Sin datos de negocio; no acredita salud de dependencias. |
+| Interés del piloto | Recepción pública de solicitudes y conservación del consentimiento de contacto | `InterestTable` propia, sin acceso a otros dominios ni lectura HTTP pública. Consulta del operador exclusivamente por IAM. |
 
 Las funciones comparten utilidades de contrato, pero se ejecutan con roles separados. El monorepo no convierte los dominios en un único proceso. Catálogos y Cotizaciones no leen tablas de otros dominios: usan contratos de Lambda con permisos IAM. Equipo y el trigger de incorporación inicializan la tabla que pertenece a su propio dominio de identidad. En esta primera versión un stack SAM coordina los recursos; separar despliegues de dominio se puede realizar conservando los contratos.
 
@@ -72,6 +77,7 @@ El administrador genera un enlace manual dirigido a un correo y rol. El token al
 | GET /api/v1/quotes/{quoteId} | Consulta de la propuesta conservada. |
 | GET /api/v1/quotes/metrics?days=7\|30\|90 | Agregados del piloto en la organización; requiere admin y usa 30 días por defecto. |
 | POST /api/v1/quotes/{quoteId}/corrections | Declaración por categoría, idempotente; requiere admin o seller. No edita el snapshot ni consume cuota. |
+| POST /api/v1/pilot-interest | Recepción pública sin JWT; devuelve 202 con referencia y estado, sin datos de contacto. No crea cuentas ni pertenencias. |
 | GET /api/v1/team/context | Pertenencias actuales y organización seleccionada disponible. |
 | GET /api/v1/team/members | Miembros del espacio; requiere admin. |
 | POST /api/v1/team/invitations | Invitación por correo/rol y token para compartir manualmente; requiere admin. |
@@ -98,9 +104,19 @@ El repositorio consulta todas las páginas `QUOTE#` de la partición autorizada,
 
 Este diseño de piloto no garantiza consultar 90 días de cualquier historial de Empresa. Antes de ampliar volumen se necesitan mediciones y una estrategia temporal o agregados con migración completa que conserven los históricos sin instrumentación. El panel `/piloto` sólo se carga en navegador para administradores; miembros, catálogos y cuota mensual actuales provienen de sus APIs de consumo y no se presentan como promedios del período. Las [definiciones de medición](004-metricas-del-piloto.md) separan tiempo estimado, ajustes y correcciones declaradas.
 
+## Convocatoria y datos de interés
+
+La página Angular pública `/piloto/interes` es independiente de la sesión comercial. La excepción `Authorizer: NONE` se aplica sólo al POST de recepción y no cambia la autorización JWT de las rutas comerciales. El contrato canónico `services/interest/contract.json` comparte versión del aviso, opciones y límites con Angular. La API admite únicamente sus diez campos, exige consentimiento `true` y versión vigente, valida tamaño máximo de 8 KB, campos acotados y opciones conocidas, y normaliza el correo y los textos. No admite adjuntos, catálogo, identidad de organización existente o campos libres adicionales.
+
+`InterestFunction` opera exclusivamente su tabla. Guarda `INTEREST#<UUID>/RECORD` con solicitud, consentimiento, aceptación en fecha de servidor y TTL de 90 días, más metadatos superiores para la revisión mínima del operador. El hash de la solicitud normalizada y la referencia permiten devolver el mismo recibo en reintentos; cambiar el contenido para una referencia ya usada produce conflicto. Una transacción condicional guarda el registro y aumenta `DAILY#<fecha UTC>/COUNTER` hasta un máximo de 200 recepciones nuevas por día. Un replay confirmado se resuelve antes de consumir capacidad; la contención está acotada. El límite diario devuelve 429 con Retry-After hasta el siguiente día UTC.
+
+El endpoint responde sólo referencia y estado received con 202, sin revelar correo, nombre ni existencia previa de una dirección. No hay GET público de solicitudes, CRM ni automatizaciones de correo, selección, registro Cognito o contratación. Los datos no se registran en logs de aplicación ni se persisten en el navegador. El operador usa IAM para listar metadatos o exportar una solicitud por su referencia a un archivo privado; no se publica un panel de contactos. El aviso y la invitación distinguen recepción de interés de aceptación al piloto.
+
+La tabla se cifra y conserva al retirar el stack; TTL marca elegibilidad de borrado a 90 días y no promete eliminación inmediata. El caudal de la ruta pública y el contador diario acotan el uso de la captura. No se atribuyen a esta tabla las copias PITR de los datos comerciales. [Decisión de convocatoria y privacidad](005-convocatoria-e-interes.md) y [texto de invitación](../piloto/convocatoria.md). La convocatoria compartida y el reclutamiento real siguen pendientes, igual que TASK-006 y Stripe.
+
 ## Operación y límites
 
-DynamoDB bajo demanda, cifrado, recuperación a un punto en el tiempo y retención de tablas al eliminar el stack. Logs con 14 días de retención; nunca registrar payloads comerciales ni tokens. HTTP API limita el caudal. Los recursos se aíslan por stack y ambiente; la elevación sigue development → testing → main.
+DynamoDB bajo demanda y cifrado, con retención de tablas al eliminar el stack. Las tablas comerciales y de identidad mantienen recuperación a un punto en el tiempo; la nueva tabla de interés usa TTL sin PITR. Logs con 14 días de retención; nunca registrar payloads comerciales, datos de contacto ni tokens. HTTP API limita el caudal. Los recursos se aíslan por stack y ambiente; la elevación sigue development → testing → main.
 
 La demo en loopback usa datos sintéticos y repositorios en memoria, separados de los adaptadores AWS; conserva los filtros de consulta y valida sus duplicados. Las pruebas locales no sustituyen la comprobación de IAM, JWT, condiciones/transacciones DynamoDB y DNS/TLS en development. La instrumentación del piloto es técnica: sus métricas sintéticas no acreditan tiempos humanos, ahorro, errores resueltos o reutilización de reglas. Esa evidencia corresponde a TASK-006 con personas y datos autorizados. Exportación asíncrona/SQS e importaciones largas/Step Functions quedan fuera del primer flujo.
 

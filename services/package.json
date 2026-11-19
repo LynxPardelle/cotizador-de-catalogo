@@ -5,6 +5,10 @@
   "type": "module",
   "files": [
     "catalog/index.mjs",
+    "interest/index.mjs",
+    "interest/domain.mjs",
+    "interest/dynamo.mjs",
+    "interest/contract.json",
     "onboarding/index.mjs",
     "quoting/index.mjs",
     "quoting/domain/price.mjs",

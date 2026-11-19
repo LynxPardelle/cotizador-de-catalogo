@@ -36,6 +36,32 @@ Desde la rama development, revisa el changeset para el stack de desarrollo antes
 
 El frontend empaquetado requiere `npm run build` antes de SAM. Su handler es `index.handler`, en `web/dist/lambda`; los adaptadores de servicios tienen handlers `catalog/index.handler`, `quoting/index.handler`, `team/index.handler` y `onboarding/index.handler`. El paquete de Web incluye el adaptador serverless y no necesita dependencias instaladas en el runtime de Lambda.
 
+## Recibir interés para el piloto
+
+La [convocatoria](piloto/convocatoria.md) contiene textos de correo y mensaje breve preparados para revisión. No se han enviado a contactos ni publicado en canales externos. La landing de development enlaza `/piloto/interes`; enviar ese formulario sólo registra interés. No confirma plaza, verifica correo, crea una cuenta ni activa un plan o cobro.
+
+El operador revisa solicitudes por IAM con `tools/pilot-interest-development.mjs`, exclusivamente en development y con el stack UPDATE_COMPLETE:
+
+```powershell
+node --use-system-ca tools/pilot-interest-development.mjs --list
+node --use-system-ca tools/pilot-interest-development.mjs --export REFERENCIA_UUID
+```
+
+Sustituir REFERENCIA_UUID por una referencia recibida, no por un correo. La lista sólo muestra metadatos y avisa si quedó acotada; para volúmenes que la excedan, revisar el histórico en la consola IAM de la tabla propia antes de decidir. La exportación escribe `artifacts/pilot-interest-<uuid>-private.json`, ignorado por Git, sin volcar contactos al terminal. No sobrescribe un archivo existente ni sigue enlaces. Abrir la copia sólo en la ubicación y con las personas acordadas; no adjuntarla a issues ni al repositorio. El TTL del registro en AWS no elimina las exportaciones locales.
+
+Las solicitudes expiran técnicamente a los 90 días, con eliminación TTL asíncrona; el cliente no promete un borrado inmediato. La revisión de encaje y la comunicación posterior son manuales. Confirmar las personas, autorización del catálogo y acuerdos del protocolo antes de iniciar; el interés recibido no reemplaza esos pasos. No usar la cuenta de una persona ni crearla en su nombre. Las opciones No y Por confirmar se revisan sin descarte automático.
+
+Para verificar recepción exclusivamente con datos ficticios:
+
+```powershell
+npm run smoke:interest:development
+# Enviar la segunda solicitud ficticia mediante el formulario y conservar su referencia.
+node --use-system-ca tools/interest-smoke.mjs --verify-browser REFERENCIA_QA_UUID
+npm run cleanup:interest:development
+```
+
+El reporte ignorado `artifacts/interest-smoke.json` contiene sólo el namespace QA y evidencia de estas comprobaciones. La limpieza verifica tabla, referencia, correo sintético y hash; no enumera ni elimina solicitudes de organizaciones. No se agotan las 200 plazas diarias ni se preparan contadores artificiales: sus bordes se verifican localmente. Los controles y la retención están descritos en el [diseño de convocatoria](architecture/005-convocatoria-e-interes.md). Stripe continúa pendiente.
+
 ## Preparar el piloto con personas
 
 El [protocolo de primeros usuarios](piloto/protocolo.md) define convocatoria, datos autorizados, calendario, casos y criterios de éxito. Usar su [guía de incorporación](piloto/guia-primeros-usuarios.md) y copiar las [plantillas vacías](piloto/plantillas/README.md) a la ubicación privada acordada fuera de Git. TASK-013 deja preparada esa documentación; TASK-006 sigue pendiente hasta observar personas y registrar resultados reales.

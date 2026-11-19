@@ -1,0 +1,23 @@
+{
+  "privacyVersion": "2026-11-19",
+  "currentMethods": [
+    { "id": "spreadsheets", "label": "Hojas de cálculo" },
+    { "id": "documents", "label": "Documentos" },
+    { "id": "software", "label": "Software de cotización" },
+    { "id": "manual", "label": "Proceso manual" },
+    { "id": "other", "label": "Otro" }
+  ],
+  "monthlyQuoteRanges": [
+    { "id": "1-20", "label": "De 1 a 20" },
+    { "id": "21-100", "label": "De 21 a 100" },
+    { "id": "101-500", "label": "De 101 a 500" },
+    { "id": "501-plus", "label": "Más de 500" },
+    { "id": "not-sure", "label": "No lo sé todavía" }
+  ],
+  "availabilityOptions": [
+    { "id": "yes", "label": "Sí" },
+    { "id": "no", "label": "No" },
+    { "id": "not-sure", "label": "Por confirmar" }
+  ],
+  "limits": { "organizationName": 100, "contactEmail": 254, "sector": 80 }
+}

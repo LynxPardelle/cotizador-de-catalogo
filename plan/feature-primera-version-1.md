@@ -1,6 +1,6 @@
 ---
 goal: Primera versión de CotiTrama
-version: '1.6'
+version: '1.7'
 date_created: 2026-11-17
 date_updated: 2026-11-19
 status: 'In Progress'
@@ -18,6 +18,7 @@ El producto pasa de una base de salud a un flujo comercial reproducible. Se mant
 - **REQ-003** Frontend Angular standalone, rutas lazy, SignalStore por flujo y HttpClient tipado, servido por Lambda mediante Angular SSR/Express/serverless-http. CloudFront OAC/IAM protege el origen Web.
 - **REQ-004** Subdominios de lynxpardelle.com: cotitrama-dev, cotitrama-test y cotitrama para development, testing y production. DNS/TLS por infraestructura; no modificar nameservers ni aliases del portafolio.
 - **REQ-005** Instrumentar el piloto por organización, con tiempo activo estimado, tamaño de muestra y ausentes explícitos, emisiones diarias y correcciones declaradas. No presentar fixtures sintéticos como mediciones humanas ni inferir ahorro, demanda o errores resueltos.
+- **REQ-006** Preparar la convocatoria y recibir interés de organizaciones mediante formulario público independiente del registro. Consentimiento de contacto, datos mínimos, recibo sin PII y acceso privado IAM para revisión; sin selección, correo, cuenta o cobro automáticos.
 - **SEC-001** Cognito Authorization Code + PKCE; JWT verificado por API Gateway para identificar el `sub`. Equipo resuelve organización y rol actuales en su tabla propia mediante invocación IAM. `X-Organization-Id` selecciona un espacio únicamente si el servidor confirma pertenencia; los grupos del JWT no son autoridad de rol. Accesos a recursos comerciales ajenos devuelven 404. Demo sólo local y sintética.
 - **CON-001** Revisiones y snapshots inmutables, emisión idempotente y conflicto al cambiar el contenido de una clave ya usada.
 - **CON-002** Importes BigInt serializados como cadenas de unidades menores, cantidades enteras, reglas/moneda/redondeo explícitos. Backend decide los importes.
@@ -47,6 +48,8 @@ TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrado
 
 - **TASK-013** Preparar el piloto con usuarios: [protocolo](../docs/piloto/protocolo.md) con dos organizaciones/cuatro personas y catorce días desde preparación; catorce casos funcionales, cinco referencias ficticias verificables, guía de incorporación y plantillas privadas de sesiones/incidencias/cierre/retroalimentación. Veinte pares previstos y criterios de integridad, exactitud, autonomía, cobertura, mejora exploratoria y utilidad. Preparación documental completada y revisada, sin participantes convocados, resultados humanos ni cambios de runtime. Stripe continúa pendiente.
 
+- **TASK-014** Convocatoria y recepción de interés: [invitación redactada, no enviada](../docs/piloto/convocatoria.md), formulario público `/piloto/interes` y `POST /api/v1/pilot-interest` sin JWT. `InterestFunction` y `InterestTable` propias completan siete Lambdas y cuatro tablas; no cambian la tabla compartida por Equipo e Incorporación dentro de identidad. Recibo 202 sin PII, consentimiento versionado, TTL a 90 días con eliminación asíncrona, reintentos sin duplicar registro/capacidad, caudal limitado y máximo transaccional de 200 recepciones nuevas por día UTC. Consulta y exportación privada por IAM del operador, sin CRM, selección, correo, signup o cobro automáticos. **Implementada; aceptación AWS y navegador en validación.** [Diseño](../docs/architecture/005-convocatoria-e-interes.md). La convocatoria compartida, las organizaciones reales, el sector, participantes y fechas siguen pendientes; no completa TASK-006 y Stripe continúa pendiente.
+
 ## Verificación y evidencia
 
 - **TEST-001** Motor puro: importes, moneda/exponente, revisión exacta, redondeo, incompatibilidad, caducidad, límites y prioridad estable.
@@ -60,6 +63,8 @@ TASK-002 y TASK-005 quedaron aceptadas en development con servicios administrado
 - **TEST-009** Piloto instrumentado: datos opcionales y acotados, preview comercial intacto, replay con otra medición válida sin nueva cuota/muestra, snapshot y emisor privado, históricos completos con ausentes explícitos, ventanas UTC y días sin emisiones, media/mediana, correcciones idempotentes por fecha de declaración y aislamiento/roles. Lecturas propias fuertes con proyección mínima; presupuesto compartido y `503 METRICS_LIMIT` sin agregado parcial. La demo preserva filtros 7/90 y rechaza `days` duplicado. Aceptada en development sobre el runtime `7dbffa9`: CI `44634469521` verde, 166 pruebas (101 backend/guardas, 63 web y dos de paquete), seis comprobaciones AWS y flujo completo de navegador con JWT real. Los datos y tiempos declarados de aceptación son sintéticos y automatizados; no acreditan productividad de usuarios humanos. [Resultado observado](../docs/verificacion.md).
 
 - **TEST-010** Preparación del piloto: enlaces locales y plantillas CSV coherentes, catorce IDs de casos únicos en estado No ejecutado, criterios con denominador, catálogo ficticio válido y cinco cálculos exactos contrastados con el motor actual. Revisión independiente de método, ayuda/abandono, sesgos, roles, cuotas UTC y separación entre práctica y cohorte. No sustituye ejecutar TASK-006.
+
+- **TEST-011** Interés: esquema exacto, consentimiento/versionado, límites/normalización, respuesta y errores sin datos personales, reintentos idénticos/concurrentes sin duplicación y conflicto ante contenido cambiado. Transacción registro/contador, límite diario UTC, contención acotada y TTL; frontend público sin sesión, payload congelado para reintentos, estados de envío/confirmación y SSR sin datos de solicitud. Guardas del operador y aceptación AWS/navegador siguen en validación hasta registrar evidencia real, sin sustituir reclutamiento humano.
 
 Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm run smoke:ssr`, `npm run pilot`, `cfn-lint infra/template.yaml`. Los resultados observados y las limitaciones se registran en [Verificación](../docs/verificacion.md).
 
@@ -80,6 +85,7 @@ Comandos desde la raíz: `npm test`, `npm run test:web`, `npm run build`, `npm r
 | Métricas y correcciones del piloto | `services/quoting/domain/pilot-metrics.mjs`, `services/quoting/index.mjs`, `web/src/app/features/pilot/` |
 | Smoke de métricas en development | `tools/pilot-metrics-smoke.mjs` |
 | Piloto con personas: protocolo, casos y guía | `docs/piloto/` |
+| Convocatoria, captura y revisión privada | `docs/piloto/convocatoria.md`, `services/interest/`, `web/src/app/features/pilot-interest/`, `tools/pilot-interest-development.mjs` |
 | CI | `.github/workflows/ci.yml` |
 
 Se conserva Node.js 24, Angular 22 y NgRx Signals 22; los lockfiles fijan las dependencias. El hosting replica el patrón SSR del portafolio sin reutilizar sus stacks, pool de identidad ni dominios principales.
@@ -90,4 +96,4 @@ No se incluyen cobros/licencias automáticas, contratación de suscripciones, ex
 
 ## Primer pendiente para continuar desde remoto
 
-Confirmar dos organizaciones del mismo sector, cuatro participantes y el catálogo mínimo autorizado de cada organización; acordar el facilitador, canal privado y fecha de inicio del [protocolo preparado](../docs/piloto/protocolo.md), y ejecutar TASK-006. La preparación documental de TASK-013 no significa que haya participantes inscritos o resultados humanos. Registro, Equipo, límites, avisos y métricas tienen aceptación técnica en development; esa evidencia sintética no valida demanda, disposición a pagar, ahorro humano ni carga sostenida de Empresa. Las promociones autorizadas siguen únicamente PR development → testing → main. Stripe continúa pendiente, sin contratación ni cobros. Consultar [Verificación](../docs/verificacion.md) para el estado de cada entrega.
+Cerrar la aceptación AWS y de navegador de TASK-014 y registrar su evidencia. Después, compartir la [convocatoria preparada](../docs/piloto/convocatoria.md) por un canal autorizado, revisar las solicitudes y confirmar dos organizaciones del mismo sector, cuatro participantes y el catálogo mínimo autorizado de cada organización. Acordar facilitador, canal privado y fecha de inicio del [protocolo](../docs/piloto/protocolo.md), y ejecutar TASK-006. Redactar la invitación y recibir interés no significa haber inscrito participantes ni observado resultados humanos. La evidencia técnica sintética no valida demanda, disposición a pagar, ahorro humano ni carga sostenida de Empresa. Las promociones autorizadas siguen únicamente PR development → testing → main. Stripe continúa pendiente, sin contratación ni cobros. Consultar [Verificación](../docs/verificacion.md) para el estado de cada entrega.
