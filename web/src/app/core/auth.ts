@@ -1,6 +1,7 @@
 import { EnvironmentProviders, inject, Injectable, makeEnvironmentProviders, provideAppInitializer, signal } from '@angular/core';
 import { RuntimeConfig } from './runtime-config';
 import { DOCUMENT } from '@angular/common';
+import { WorkspaceContext } from './workspace-context';
 
 interface TokenSession { accessToken: string; expiresAt: number }
 const TOKEN_KEY = 'cotitrama.session';
@@ -9,26 +10,16 @@ const FLOW_KEY = 'cotitrama.pkce';
 export function safeReturnPath(path: string): string {
   return path.startsWith('/') && !path.startsWith('//') && !path.includes('\\') && !path.startsWith('/auth/') ? path : '/cotizar';
 }
-function payload(token: string): Record<string, unknown> {
-  try { return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return {}; }
-}
-
 @Injectable({ providedIn: 'root' })
 export class Auth {
   readonly config = inject(RuntimeConfig);
   private readonly document = inject(DOCUMENT);
+  readonly workspace = inject(WorkspaceContext);
   private readonly session = signal<TokenSession | undefined>(undefined);
   readonly error = signal('');
   readonly busy = signal(false);
   get available() { return this.config.settings().demo || !!this.bearer(); }
-  get role(): string {
-    if (this.config.settings().demo) return 'admin';
-    const claims = payload(this.bearer());
-    const raw = claims['cognito:groups'];
-    const groups = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.replace(/^\[|\]$/g, '').split(',').map((v) => v.trim().replace(/^"|"$/g, '')) : [];
-    const match = groups.find((v: unknown) => typeof v === 'string' && /^org:[a-zA-Z0-9_-]+:(admin|seller|reader)$/.test(v));
-    return typeof match === 'string' ? match.split(':')[2] : 'reader';
-  }
+  get role(): string { return this.workspace.role(); }
   bearer() {
     const session = this.session();
     if (!session || session.expiresAt <= Date.now() + 5000) return '';
@@ -83,6 +74,7 @@ export class Auth {
       const session = { accessToken: tokens.access_token, expiresAt: Date.now() + tokens.expires_in * 1000 };
       sessionStorage.setItem(TOKEN_KEY, JSON.stringify(session));
       this.session.set(session);
+      await this.workspace.load();
       return safeReturnPath(flow.next);
     } catch {
       this.clear();
@@ -101,6 +93,7 @@ export class Auth {
   }
   private clear() {
     this.session.set(undefined);
+    this.workspace.reset();
     if (this.config.browser) { sessionStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(FLOW_KEY); }
   }
   private base64(bytes: Uint8Array) { return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -111,5 +104,6 @@ export function provideCotiTrama(): EnvironmentProviders {
     const config = inject(RuntimeConfig);
     const auth = inject(Auth);
     await config.load(); auth.restore();
+    if (config.browser && auth.available) await auth.workspace.load();
   })]);
 }

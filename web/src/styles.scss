@@ -210,3 +210,44 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; white-spa
 @media (max-width: 850px) { .landing-header { min-height: 78px; gap: 1rem; flex-wrap: wrap; padding: 1rem 1.25rem; } .landing-account { margin-left: auto; gap: .7rem; } .landing-header nav { width: 100%; margin-left: 0; gap: 1.5rem; order: 3; } .landing-header nav a { padding: .4rem 0 0; font-size: .8rem; } .landing-width { width: calc(100% - 2.5rem); } .hero-composition { grid-template-columns: 1fr; padding-bottom: 3rem; gap: 3rem; } .hero-copy { max-width: 650px; padding-bottom: 0; } .hero-copy h1 { font-size: clamp(2.6rem, 7vw, 3.9rem); } .hero-description { max-width: 34rem; } .proposal-visual { width: min(450px, 100%); justify-self: center; padding-inline: .5rem; } .hero-baseline { gap: 1.5rem; font-size: .65rem; flex-wrap: wrap; } .problem-layout { grid-template-columns: 1fr; gap: 1.2rem; } .landing-problem, .product-detail, .landing-faq { padding-block: 4rem; } .landing-workflow, .landing-plans { padding-block: 4rem; } .section-intro { flex-direction: column; align-items: flex-start; gap: 1.4rem; margin-bottom: 2.2rem; } .workflow-steps { gap: 1.6rem; } .workflow-steps h3 { font-size: 1.05rem; } .product-detail { grid-template-columns: 1fr; gap: 2.5rem; } .version-visual { padding-left: 1.5rem; width: min(500px, 100%); } .plan-grid { grid-template-columns: 1fr; } .plan + .plan { border-left: 0; border-top: 1px solid #c9d3bd; } .plan { padding: 2rem; } .plan h3, .plan-description { min-height: 0; } .plan-price { margin-block: .4rem 1rem; } .plan .button, .plan button { width: auto; padding-inline: 1rem; } .landing-faq { grid-template-columns: 1fr; gap: 1.5rem; } .landing-footer { grid-template-columns: 1fr 1fr; } .landing-footer > div { grid-column: 1 / -1; justify-self: start; } .landing-footer > p { justify-self: end; } }
 @media (max-width: 540px) { .landing-header .brand { font-size: 1.2rem; } .landing-header .brand-mark { width: 31px; height: 31px; font-size: 1.05rem; } .landing-account .text-button { font-size: .72rem; } .landing-account .compact { padding: .5rem .65rem; font-size: .72rem; } .landing-header nav { gap: 1.2rem; } .landing-hero { padding-top: 3rem; } .hero-copy h1 { font-size: 2.7rem; } .hero-description { font-size: .96rem; } .hero-actions { gap: 1.2rem; } .hero-actions > a:not(.button) { font-size: .8rem; } .hero-footnote { font-size: .7rem; } .proposal-sheet { padding: 1.3rem; box-shadow: 6px 8px 0 #426054, 10px 16px 25px #09291f33; } .sheet-heading h2 { font-size: 1.55rem; } .sheet-status { font-size: .58rem; padding-inline: .3rem; } .sheet-top { gap: .4rem; } .sheet-total > strong { font-size: 2.4rem; } .hero-baseline { gap: .55rem 1rem; padding-block: 1rem; } .workflow-steps { grid-template-columns: 1fr; gap: 1.8rem; } .workflow-steps h3 { margin-top: .8rem; font-size: 1.25rem; } .workflow-steps p { max-width: none; } .landing-kicker { font-size: .65rem; } .landing h2 { font-size: 2rem; } .landing-start h2 { font-size: 2.4rem; } .landing-start { padding-block: 3.5rem; } .landing-footer { padding-block: 2rem; } }
 @media (prefers-reduced-motion: reduce) { .hero-copy, .proposal-visual { animation: none !important; } }
+
+.workspace-switcher { display: flex; align-items: center; gap: .9rem; padding: .75rem max(1.5rem, calc((100vw - 1200px) / 2)); border-bottom: 1px solid var(--line); background: #edf0e4; }
+.workspace-switcher label { font-size: .75rem; margin: 0; white-space: nowrap; }
+.workspace-switcher select { width: auto; min-width: 230px; padding: .4rem .6rem; min-height: 36px; font-size: .8rem; }
+.workspace-switcher > span { margin-left: auto; font-size: .72rem; color: var(--muted); }
+.team-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); border-top: 1px solid var(--line); }
+.team-list app-member-row { display: block; }
+.team-list { padding: 2rem 2.5rem 2rem 0; }
+.team-invite { border-left: 1px solid var(--line); padding: 2rem 0 2rem 2.5rem; }
+.team-invite form button { margin-top: 1.5rem; }
+.team-invite .muted { font-size: .8rem; }
+.team-member { padding: 1.25rem 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; }
+.member-identity strong { display: block; font-size: .875rem; font-weight: 600; overflow-wrap: anywhere; }
+.member-identity > span { display: block; color: var(--muted); font-size: .75rem; margin-top: .2rem; }
+.member-role-edit { grid-column: 1 / -1; display: flex; align-items: center; gap: .7rem; }
+.member-role-edit label { margin: 0; font-size: .75rem; }
+.member-role-edit select { width: auto; max-width: 200px; font-size: .8rem; padding: .4rem .6rem; min-height: 36px; }
+.member-role-edit .text-button { font-size: .75rem; }
+.remove-member { grid-column: 2; grid-row: 1; font-size: .73rem; white-space: nowrap; padding: 0; }
+.team-admin-note { padding-top: 1rem; font-size: .75rem; }
+.remove-confirmation { border-left: 3px solid #b37e50; padding: 1.2rem; background: #f1eadb; margin-top: 1.4rem; }
+.remove-confirmation h3 { font-size: 1rem; margin-bottom: .6rem; overflow-wrap: anywhere; }
+.remove-confirmation p { font-size: .8rem; color: #695f49; }
+.remove-confirmation > div { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.remove-confirmation button { font-size: .8rem; padding: .55rem .8rem; }
+.invitation-created { border-top: 1px solid var(--line); margin-top: 2rem; padding-top: 1.5rem; }
+.invitation-created > strong { font-size: .875rem; overflow-wrap: anywhere; }
+.invitation-created > p { font-size: .75rem; margin-top: .4rem; }
+.invitation-created input { font-size: .8rem; }
+.invitation-link-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: .4rem; }
+.invitation-auth-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.2rem; }
+.invitation-details { border-top: 1px solid var(--line); padding-top: 2rem; margin-top: 2rem; }
+.invitation-details dl { margin-block: 1.5rem; }
+.invitation-details dl > div { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--line); font-size: .875rem; }
+.invitation-details dd { overflow-wrap: anywhere; }
+.landing .plan h3 { font-size: 1.2rem; min-height: 5.1rem; }
+.plan-proposal-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: .5rem 0 0; }
+.landing .plan-price { font-size: 1.65rem; margin: .3rem 0 0; }
+.plan-price-period { font-size: .72rem; color: var(--muted); margin: .1rem 0 1.3rem; }
+@media (max-width: 850px) { .workspace-switcher { padding-inline: 1.25rem; flex-wrap: wrap; gap: .5rem .8rem; } .workspace-switcher > span { margin-left: 0; width: 100%; } .team-layout { grid-template-columns: 1fr; } .team-list { padding: 1.8rem 0; } .team-invite { border-left: 0; border-top: 1px solid var(--line); padding: 2rem 0; } .landing .plan h3 { min-height: 0; } }
+@media (max-width: 540px) { .workspace-switcher select { min-width: 0; flex: 1; max-width: calc(100% - 100px); } .team-member { gap: .6rem; } .member-role-edit { flex-wrap: wrap; } .member-role-edit select { max-width: 165px; } .invitation-details dl > div { flex-direction: column; gap: .25rem; } .invitation-details dd { text-align: left; } }

@@ -4,6 +4,7 @@ import {
   CreateGroupCommand,
   AdminAddUserToGroupCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { normalizeEmail } from '../team/domain.mjs';
 
 function isVerifiedSignup(event) {
   const attributes=event?.request?.userAttributes;
@@ -14,7 +15,7 @@ function isVerifiedSignup(event) {
     && attributes.email_verified==='true';
 }
 
-export function createOnboardingHandler({client=new CognitoIdentityProviderClient({maxAttempts:2})}={}) {
+export function createOnboardingHandler({client=new CognitoIdentityProviderClient({maxAttempts:2}),memberships,clock=()=>new Date()}={}) {
   return async event=>{
     if(event?.triggerSource==='PostConfirmation_ConfirmForgotPassword') return event;
     if(!isVerifiedSignup(event)) throw new Error('Invalid verified signup event.');
@@ -28,6 +29,11 @@ export function createOnboardingHandler({client=new CognitoIdentityProviderClien
       try { await client.send(new CreateGroupCommand({UserPoolId,GroupName})); }
       catch(error) { if(error?.name!=='GroupExistsException') throw error; }
       await client.send(new AdminAddUserToGroupCommand({UserPoolId,Username:event.userName,GroupName}));
+      if(memberships) {
+        const subject=event.request.userAttributes.sub.toLowerCase();
+        const email=normalizeEmail(event.request.userAttributes.email);
+        await memberships.initialize(subject,email,[{subject,organizationId:`org-${digest}`,role:'admin',email,joinedAt:clock().toISOString()}]);
+      }
     } catch {
       // Lambda failures must never include SDK request details or personal attributes.
       throw new Error('Unable to provision organization membership.');
@@ -36,4 +42,8 @@ export function createOnboardingHandler({client=new CognitoIdentityProviderClien
   };
 }
 
-export const handler=createOnboardingHandler();
+let configured;
+export async function handler(event) {
+  configured ??= import('../team/dynamo.mjs').then(({createDynamoTeamRepository})=>createOnboardingHandler({memberships:createDynamoTeamRepository()}));
+  return (await configured)(event);
+}

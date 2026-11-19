@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
+import { createMemoryTeamRepository } from '../team/memory.mjs';
 
 const module=await import('./index.mjs').catch(()=>({}));
 const confirmed=(sub='11111111-1111-4111-8111-111111111111',userName='person-one')=>({
@@ -87,4 +88,17 @@ test('a retry after partial provisioning reuses the existing group',async()=>{
   await assert.rejects(handler(event),{message:'Unable to provision organization membership.'});
   await handler(event);
   assert.equal(api.groups.size,1);assert.equal(api.memberships.get(event.userName).size,1);
+});
+
+test('onboarding initializes authoritative owner membership once and does not restore a later demoted role',async()=>{
+  const repository=createMemoryTeamRepository();const api=client();const event=confirmed();
+  const handler=module.createOnboardingHandler({client:api,memberships:repository,clock:()=>new Date('2026-11-20T12:00:00Z')});
+  await handler(event);
+  const members=await repository.memberships(event.request.userAttributes.sub);
+  assert.equal(members.length,1);assert.equal(members[0].role,'admin');assert.equal(members[0].email,'private@example.invalid');
+  const other='22222222-2222-4222-8222-222222222222';
+  await repository.initialize(other,'other@example.invalid',[{subject:other,organizationId:members[0].organizationId,role:'admin',joinedAt:'2026-11-20T12:00:00Z'}]);
+  await repository.changeRole(members[0].organizationId,other,event.request.userAttributes.sub,'reader');
+  await handler(event);
+  assert.equal((await repository.memberships(event.request.userAttributes.sub))[0].role,'reader');
 });

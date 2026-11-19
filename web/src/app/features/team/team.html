@@ -1,0 +1,20 @@
+<main class="workspace">
+  <div class="page-heading"><div><p class="eyebrow">Tu espacio de trabajo</p><h1>Equipo</h1><p class="lede">Invita a las personas que cotizan contigo y define su acceso.</p></div></div>
+  @if (!auth.available) { <section class="empty-state"><h2>Inicia sesión para ver tu equipo</h2><p>El acceso está vinculado a tu cuenta y a cada espacio.</p><button type="button" (click)="auth.login('/equipo')">Iniciar sesión</button></section> }
+  @else if (auth.role !== 'admin') { <section class="empty-state"><h2>Consulta con un administrador</h2><p>Solo los administradores pueden invitar personas y gestionar el equipo de este espacio.</p></section> }
+  @else {
+    @if (store.error()) { <p class="notice error" role="alert">{{ store.error() }}</p> }
+    @if (store.message()) { <p class="notice success" role="status">{{ store.message() }}</p> }
+    @if (store.busy()) { <p role="status" class="loading">Actualizando el equipo…</p> }
+    <div class="team-layout"><section class="team-list" aria-labelledby="members-title"><div class="detail-heading"><h2 id="members-title">Miembros del espacio</h2><span class="muted">{{ store.members().length }} miembros</span></div>
+      @for (member of store.members(); track member.subject) { <app-member-row [member]="member" [busy]="store.busy()" (roleChange)="store.changeRole($event.subject, $event.role)" (remove)="removing.set($event)" /> }
+      @empty { @if (!store.busy()) { <p class="muted">Aún no se muestran miembros. Actualiza la lista para volver a comprobarla.</p> } }
+      <button type="button" class="text-button" [disabled]="store.busy()" (click)="store.load()">Actualizar miembros</button>
+      @if (removing(); as member) { <section class="remove-confirmation" role="group" aria-labelledby="remove-title"><h3 id="remove-title">¿Retirar el acceso de {{ member.email }}?</h3><p>La persona dejará de acceder a este espacio. Su cuenta se conserva y puedes volver a invitarla.</p><div><button type="button" [disabled]="store.busy()" (click)="remove()">Sí, retirar acceso</button><button type="button" class="text-button" [disabled]="store.busy()" (click)="removing.set(undefined)">Cancelar</button></div></section> }
+      <p class="muted team-admin-note">El espacio debe conservar al menos un administrador.</p>
+    </section><section class="team-invite" aria-labelledby="invite-title"><p class="section-label">Sumar a una persona</p><h2 id="invite-title">Crear una invitación</h2><p class="muted">El enlace está dirigido al correo indicado y caduca en siete días. La persona tendrá que verificar ese correo para aceptarlo.</p>
+      <form (submit)="invite($event)"><label for="invite-email">Correo de la persona</label><input id="invite-email" type="email" autocomplete="off" [formField]="fields.email" placeholder="persona@empresa.com"><label for="invite-role">Rol en este espacio</label><select id="invite-role" [formField]="fields.role"><option value="seller">Vendedor · Configura y emite propuestas</option><option value="reader">Lector · Consulta catálogos y propuestas</option><option value="admin">Administrador · Gestiona catálogo y equipo</option></select><button type="submit" class="full-width" [disabled]="store.busy() || fields().invalid()">Crear enlace de invitación</button></form>
+      @if (store.invitation(); as created) { <div class="invitation-created"><strong>Invitación para {{ created.invitation.email }}</strong><p>{{ roleLabel(created.invitation.role) }} · Caduca {{ created.invitation.expiresAt | date:'dd/MM/yyyy HH:mm':'UTC' }} UTC</p><label for="invitation-link">Enlace para compartir</label><input id="invitation-link" type="text" readonly [value]="invitationLink()" (focus)="$any($event.target).select()"><div class="invitation-link-actions"><button type="button" class="text-button" (click)="copyLink()">Copiar enlace</button><button type="button" class="text-button" (click)="store.clearInvitation()">Ocultar enlace</button></div><p class="muted" role="status">{{ copied() }}</p><p class="muted">Comparte este enlace directamente con la persona invitada. CotiTrama no envía un correo automático.</p></div> }
+    </section></div>
+  }
+</main>

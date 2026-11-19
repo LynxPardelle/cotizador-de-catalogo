@@ -1,12 +1,21 @@
 import { HttpError } from './errors.mjs';
 
 // API Gateway verifies signature, issuer, audience, expiry and required scopes.
-// Membership comes from the access token's administrator-managed Cognito groups.
-export function identity(event) {
+// Production uses this subject to query current Team database memberships.
+// Token groups are used only by the legacy isolated factory adapter below.
+export function accessSubject(event) {
   const claims = event?.requestContext?.authorizer?.jwt?.claims;
   if (!claims || claims.token_use !== 'access' || typeof claims.sub !== 'string' || !claims.sub) {
     throw new HttpError(401, 'UNAUTHORIZED', 'Inicia sesión con una cuenta autorizada.');
   }
+  return claims.sub;
+}
+
+// Legacy factory-only adapter for isolated tests and the synthetic local demo.
+// Production business handlers always inject the Team service authorizer.
+export function identity(event) {
+  const subject=accessSubject(event);
+  const claims=event.requestContext.authorizer.jwt.claims;
   let groups = claims['cognito:groups'];
   if (typeof groups === 'string') {
     try { groups = JSON.parse(groups); }
@@ -20,7 +29,7 @@ export function identity(event) {
   const memberships = groups.filter(group => typeof group === 'string' && /^org:[a-zA-Z0-9_-]{1,64}:(admin|seller|reader)$/.test(group));
   if (memberships.length !== 1) throw new HttpError(403, 'MEMBERSHIP_REQUIRED', 'La cuenta necesita una sola organización y un rol asignado.');
   const [, organizationId, role] = memberships[0].split(':');
-  return { subject: claims.sub, organizationId, role };
+  return { subject, organizationId, role };
 }
 
 export function requireRole(user, roles) {

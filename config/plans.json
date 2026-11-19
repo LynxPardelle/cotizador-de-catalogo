@@ -1,0 +1,48 @@
+{
+  "status": "proposal",
+  "currency": "MXN",
+  "billingPeriod": "month",
+  "taxesIncluded": false,
+  "billingEnabled": false,
+  "limitsEnforced": false,
+  "reviewedAt": "2026-11-19",
+  "notice": "Precios y límites propuestos, antes de impuestos. El piloto continúa sin cargos. Crear una cuenta no contrata una suscripción.",
+  "plans": [
+    {
+      "id": "esencial",
+      "name": "Esencial",
+      "priceMinor": "39900",
+      "description": "Ordena tu primer catálogo y conserva el desglose de cada propuesta.",
+      "limits": {
+        "members": 2,
+        "activeCatalogs": 2,
+        "issuedQuotesPerMonth": 100
+      },
+      "ctaLabel": "Crear cuenta para el piloto"
+    },
+    {
+      "id": "equipo",
+      "name": "Equipo",
+      "priceMinor": "119900",
+      "description": "Comparte catálogos y responsabilidades con tu equipo comercial.",
+      "limits": {
+        "members": 8,
+        "activeCatalogs": 10,
+        "issuedQuotesPerMonth": 1000
+      },
+      "ctaLabel": "Explorar el piloto en equipo"
+    },
+    {
+      "id": "empresa",
+      "name": "Empresa",
+      "priceMinor": "349900",
+      "description": "Un escenario base para equipos con más catálogos y volumen de propuestas.",
+      "limits": {
+        "members": 25,
+        "activeCatalogs": 50,
+        "issuedQuotesPerMonth": 5000
+      },
+      "ctaLabel": "Evaluar el piloto"
+    }
+  ]
+}

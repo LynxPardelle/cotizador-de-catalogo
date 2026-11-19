@@ -18,13 +18,18 @@ const root = await handler(request('/'), {});
 assert.equal(root.statusCode, 200);
 assert.match(root.body, /CotiTrama/);
 assert.match(root.body, /Crear cuenta|Empezar/);
-for (const path of ['/cotizar', '/catalogos', '/propuestas/smoke-example']) {
+for (const path of ['/cotizar', '/catalogos', '/equipo', '/propuestas/smoke-example']) {
   const response = await handler(request(path), {});
   assert.equal(response.statusCode, 200, `${path}: ${response.body}`);
   assert.match(response.body, /CotiTrama/);
   assert.match(response.body, /<app-root[^>]*>[\s\S]+<\/app-root>/);
   assert.doesNotMatch(response.body, /access_token|id_token|refresh_token/);
 }
+const invitationToken = 'a'.repeat(43);
+const invitation = await handler(request(`/invitacion/${invitationToken}`), {});
+assert.equal(invitation.statusCode, 200);
+assert.match(invitation.body, /Tu invitación a CotiTrama/);
+assert.ok(!invitation.body.includes(invitationToken), 'Invitation token must not be serialized in SSR HTML.');
 const config = await handler(request('/config.json'), {});
 assert.equal(config.statusCode, 200);
 assert.equal(JSON.parse(config.body).demo, false);

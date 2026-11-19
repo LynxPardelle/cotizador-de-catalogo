@@ -94,7 +94,7 @@ export async function main(args=process.argv.slice(2)) {
   assert.equal(config?.region,region,'Region guard failed.');
   const response=await awsJson(['cloudformation','describe-stacks'],['--stack-name',stackName]);
   const outputs=validateDevelopmentStack(config,response.Stacks?.[0]);
-  const needed=['CatalogFunctionName','QuotesFunctionName','OnboardingFunctionName','UserPoolClientId'];
+  const needed=['CatalogFunctionName','QuotesFunctionName','OnboardingFunctionName','TeamFunctionName','UserPoolClientId'];
   for(const key of needed) assert.ok(typeof outputs[key]==='string' && outputs[key],'Deploy the current development template before QA.');
   for(const key of needed.filter(key=>key.endsWith('FunctionName'))) assert.ok(outputs[key].startsWith(`${stackName}-`),'Function ownership guard failed.');
   await prepareArtifactDirectory();
@@ -103,7 +103,7 @@ export async function main(args=process.argv.slice(2)) {
   const lambdaSdk=require('@aws-sdk/client-lambda');
   const cognito=new cognitoSdk.CognitoIdentityProviderClient({region,maxAttempts:3});
   const lambda=new lambdaSdk.LambdaClient({region,maxAttempts:3});
-  const report={startedAt:new Date().toISOString(),stackName,region,publicUrl:origin,mode,classification:{accounts:'Admin-created synthetic QA; emails suppressed.',business:'IAM Lambda invocation using HTTP API v2 event contract.',roleChecks:'IAM event role variants; not Cognito-issued role JWTs.',jwtGateway:'Not authenticated by this script. Browser QA must test real Hosted UI tokens.'},checks:[]};
+  const report={startedAt:new Date().toISOString(),stackName,region,publicUrl:origin,mode,classification:{accounts:'Admin-created synthetic QA; emails suppressed.',business:'IAM Lambda invocation using HTTP API v2 event contract.',roleChecks:'Real Team database membership changes; stale legacy claims cannot override current roles.',jwtGateway:'Not authenticated by this script. Browser QA must test real Hosted UI tokens.'},checks:[]};
   let manifest;
   const savePrivate=()=>writeJson(privatePath,manifest,true);
   const saveReport=()=>writeJson(reportPath,{...report,...(manifest ? {runId:manifest.runId,actors:safeResult(manifest)} : {}),updatedAt:new Date().toISOString()});
@@ -205,11 +205,32 @@ export async function main(args=process.argv.slice(2)) {
     if(mode==='--prepare') {await saveReport();console.log('CotiTrama development QA prepared. Credentials are in the ignored private artifact.');return report;}
 
     const {owner,other}=manifest.actors;
-    const event=(actor,method,path,body,key,role='admin')=>({version:'2.0',rawPath:`/api/v1${path}`,headers:key ? {'idempotency-key':key} : {},body:body===undefined ? undefined : JSON.stringify(body),requestContext:{requestId:`aws-qa-${randomUUID()}`,http:{method},authorizer:{jwt:{claims:{sub:actor.sub,token_use:'access','cognito:groups':[role==='admin' ? actor.group : `org:${actor.organizationId}:${role}`]}}}}});
-    const call=async(name,input,status)=>{const result=await invoke(name,input);assert.equal(result.statusCode,status,'Unexpected business HTTP contract status.');return JSON.parse(result.body);};
+    const event=(actor,method,path,body,key,organizationId=actor.organizationId)=>({version:'2.0',rawPath:`/api/v1${path}`,headers:{...(key ? {'idempotency-key':key} : {}),...(organizationId ? {'x-organization-id':organizationId} : {})},body:body===undefined ? undefined : JSON.stringify(body),requestContext:{requestId:`aws-qa-${randomUUID()}`,http:{method},authorizer:{jwt:{claims:{sub:actor.sub,token_use:'access','cognito:groups':[actor.group]}}}}});
+    const call=async(name,input,status)=>{const result=await invoke(name,input);assert.equal(result.statusCode,status,'Unexpected business HTTP contract status.');return result.body ? JSON.parse(result.body) : undefined;};
+    const team=(actor,method,path,body,status=200,organizationId=actor.organizationId)=>call(outputs.TeamFunctionName,event(actor,method,`/team${path}`,body,undefined,organizationId),status);
     const catalog={...structuredClone(syntheticCatalog),catalogId:manifest.catalogId,name:'Catálogo sintético QA AWS'};
     const request={catalogId:catalog.catalogId,version:1,currency:'MXN',items:[{productId:'desk',quantity:5,optionIds:['oak','assembly']}]};
     let issued;
+    await check('recover-only-recorded-qa-owner-role-and-repeated-run-membership',async()=>{
+      const ownerContext=await team(owner,'GET','/context');
+      const ownerMember=ownerContext.memberships.find(member=>member.organizationId===owner.organizationId);
+      assert.ok(ownerMember,'The QA owner no longer has its original workspace.');
+      if(ownerMember.role!=='admin') {
+        const otherContext=await team(other,'GET','/context',undefined,200,owner.organizationId);
+        assert.ok(otherContext.memberships.some(member=>member.organizationId===owner.organizationId && member.role==='admin'),'No recorded QA administrator can safely restore this run.');
+        await team(other,'PATCH',`/members/${owner.sub}`,{role:'admin'},200,owner.organizationId);
+      }
+      const roster=await team(owner,'GET','/members');
+      assert.ok(roster.members.every(member=>[owner.sub,other.sub].includes(member.subject)),'Unrelated users in this QA workspace require manual review before a destructive membership test.');
+      if(roster.members.some(member=>member.subject===other.sub)) await team(owner,'DELETE',`/members/${other.sub}`,undefined,204);
+    });
+    await check('team-context-has-authoritative-initial-owner-memberships',async()=>{
+      for(const actor of [owner,other]) {
+        const context=await team(actor,'GET','/context');
+        assert.equal(context.activeOrganizationId,actor.organizationId);
+        assert.ok(context.memberships.some(member=>member.organizationId===actor.organizationId && member.role==='admin'),'Initial owner membership is missing.');
+      }
+    });
     await check('published-catalog-and-exact-price-preview',async()=>{
       const published=await invoke(outputs.CatalogFunctionName,event(owner,'POST',`/catalogs/${catalog.catalogId}/publications`,catalog));
       assert.ok([200,201].includes(published.statusCode),'Synthetic publication failed.');
@@ -239,11 +260,67 @@ export async function main(args=process.argv.slice(2)) {
       assert.deepEqual(saved,issued,'Saved proposal changed after a new catalog revision.');
       assert.deepEqual(saved.lines[0].selectedOptions.find(option=>option.id==='oak'),{id:'oak',name:'Roble',priceMinor:'80000'},'Saved option details changed.');
     });
-    await check('organization-boundaries-and-role-contracts',async()=>{
+    await check('organization-boundaries-before-invitation',async()=>{
       await call(outputs.QuotesFunctionName,event(other,'GET',`/quotes/${issued.quoteId}`),404);
       await call(outputs.CatalogFunctionName,event(other,'GET',`/catalogs/${catalog.catalogId}/versions/1`),404);
-      await call(outputs.QuotesFunctionName,event(owner,'POST','/quotes/preview',request,undefined,'reader'),403);
-      await call(outputs.CatalogFunctionName,event(owner,'POST',`/catalogs/${catalog.catalogId}/publications`,{...catalog,version:3},undefined,'seller'),403);
+    });
+    await check('recipient-bound-invitation-acceptance-retry-and-second-workspace',async()=>{
+      const invitation=await team(owner,'POST','/invitations',{email:other.email,role:'seller'},201);
+      manifest.teamInvitation={...invitation,createdAt:new Date().toISOString()};await savePrivate();
+      const token=manifest.teamInvitation.token;
+      await team(owner,'GET',`/invitations/${token}`,undefined,404);
+      const details=await team(other,'GET',`/invitations/${token}`);
+      assert.equal(details.invitation.email,other.email);
+      const first=await team(other,'POST',`/invitations/${token}/accept`,{});
+      assert.equal(first.membership.organizationId,owner.organizationId);assert.equal(first.membership.role,'seller');
+      const replay=await team(other,'POST',`/invitations/${token}/accept`,{});assert.deepEqual(replay,first);
+      const context=await team(other,'GET','/context',undefined,200,owner.organizationId);
+      assert.equal(context.activeOrganizationId,owner.organizationId);
+      assert.ok(context.memberships.some(member=>member.organizationId===other.organizationId && member.role==='admin'));
+      assert.ok(context.memberships.some(member=>member.organizationId===owner.organizationId && member.role==='seller'));
+      await call(outputs.QuotesFunctionName,event(other,'POST','/quotes/preview',request,undefined,owner.organizationId),200);
+      await call(outputs.CatalogFunctionName,event(other,'POST',`/catalogs/${catalog.catalogId}/publications`,{...catalog,version:3},undefined,owner.organizationId),403);
+      report.team={recipientBound:true,acceptanceIdempotent:true,secondWorkspace:true};
+    });
+    await check('real-reader-demotion-overrides-stale-admin-claims',async()=>{
+      const changed=await team(owner,'PATCH',`/members/${other.sub}`,{role:'reader'});
+      assert.equal(changed.member.role,'reader');
+      const stale=event(other,'POST','/quotes/preview',request,undefined,owner.organizationId);
+      stale.requestContext.authorizer.jwt.claims['cognito:groups']=[`org:${owner.organizationId}:admin`];
+      await call(outputs.QuotesFunctionName,stale,403);
+      await call(outputs.CatalogFunctionName,event(other,'GET',`/catalogs/${catalog.catalogId}/versions/1`,undefined,undefined,owner.organizationId),200);
+      await team(other,'GET','/members',undefined,403,owner.organizationId);
+      report.team.staleClaimsIgnored=true;
+    });
+    await check('concurrent-last-admin-protection-and-restoration',async()=>{
+      await team(owner,'PATCH',`/members/${other.sub}`,{role:'admin'});
+      const results=await Promise.all([owner,other].map(actor=>invoke(outputs.TeamFunctionName,event(actor,'PATCH',`/team/members/${actor.sub}`,{role:'reader'},undefined,owner.organizationId))));
+      assert.equal(results.filter(result=>result.statusCode===200).length,1,'Exactly one administrator demotion must succeed.');
+      assert.equal(results.filter(result=>result.statusCode===409).length,1,'The last administrator must be protected.');
+      const demoted=results[0].statusCode===200 ? owner : other;
+      const remaining=demoted===owner ? other : owner;
+      const protectedRoster=await team(remaining,'GET','/members',undefined,200,owner.organizationId);
+      assert.equal(protectedRoster.members.filter(member=>member.role==='admin').length,1,'The race must leave exactly one administrator.');
+      await team(remaining,'PATCH',`/members/${demoted.sub}`,{role:'admin'},200,owner.organizationId);
+      const roster=await team(owner,'GET','/members');
+      assert.equal(roster.members.filter(member=>member.role==='admin').length,2);
+      report.team.lastAdminRaceProtected=true;
+    });
+    await check('membership-removal-immediately-blocks-business-and-used-invite-replay',async()=>{
+      await team(owner,'DELETE',`/members/${other.sub}`,undefined,204);
+      const stale=event(other,'POST','/quotes/preview',request,undefined,owner.organizationId);
+      stale.requestContext.authorizer.jwt.claims['cognito:groups']=[`org:${owner.organizationId}:admin`];
+      await call(outputs.QuotesFunctionName,stale,403);
+      await call(outputs.CatalogFunctionName,event(other,'GET',`/catalogs/${catalog.catalogId}/versions/1`,undefined,undefined,owner.organizationId),403);
+      await team(other,'POST',`/invitations/${manifest.teamInvitation.token}/accept`,{},409);
+      const recovered=await team(other,'GET','/context',undefined,200,owner.organizationId);
+      assert.equal(recovered.activeOrganizationId,other.organizationId,'A removed persisted workspace must recover to an owned workspace.');
+      await team(owner,'DELETE',`/members/${owner.sub}`,undefined,409);
+      await team(owner,'PATCH',`/members/${owner.sub}`,{role:'reader'},409);
+      report.team.removalImmediate=true;report.team.usedInviteCannotResurrect=true;
+      const fresh=await team(owner,'POST','/invitations',{email:other.email,role:'seller'},201);
+      manifest.browserInvitation={...fresh,url:`${origin}/invitacion/${fresh.token}`};await savePrivate();
+      report.team.pendingBrowserInvitationInPrivateArtifact=true;
     });
     await check('cloudfront-public-html-config-health-and-anonymous-business-denial',async()=>{
       for(const [path,status] of [['/',200],['/config.json',200],['/api/health',200],['/api/v1/catalogs',401]]) {

@@ -49,6 +49,8 @@ Resources:
         AllowAdminCreateUserOnly: false
       UsernameAttributes: [email]
       AutoVerifiedAttributes: [email]
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
       LambdaConfig:
         PostConfirmation: !GetAtt OnboardingFunction.Arn
       UserPoolTags:
@@ -109,6 +111,27 @@ Resources:
     Properties:
       RetentionInDays: 14
 
+  MembersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
   OnboardingRole:
     Type: AWS::IAM::Role
     Properties:
@@ -127,6 +150,9 @@ Resources:
               - Effect: Allow
                 Action: [logs:CreateLogStream, logs:PutLogEvents]
                 Resource: !GetAtt OnboardingLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
+                Resource: !GetAtt MembersTable.Arn
 
   OnboardingFunction:
     Type: AWS::Serverless::Function
@@ -134,8 +160,95 @@ Resources:
       CodeUri: ../services/
       Handler: onboarding/index.handler
       Role: !GetAtt OnboardingRole.Arn
+      Environment:
+        Variables:
+          MEMBERS_TABLE: !Ref MembersTable
       LoggingConfig:
         LogGroup: !Ref OnboardingLogGroup
+
+  TeamLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+  TeamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: OwnIdentityAndMemberships
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt TeamLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem, dynamodb:ConditionCheckItem]
+                Resource: !GetAtt MembersTable.Arn
+              - Effect: Allow
+                Action: [cognito-idp:AdminGetUser, cognito-idp:AdminListGroupsForUser]
+                Resource: !GetAtt UserPool.Arn
+  TeamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../services/
+      Handler: team/index.handler
+      Role: !GetAtt TeamRole.Arn
+      Environment:
+        Variables:
+          MEMBERS_TABLE: !Ref MembersTable
+          TEAM_USER_POOL_ID: !Ref UserPool
+      LoggingConfig:
+        LogGroup: !Ref TeamLogGroup
+      Events:
+        Context:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/context
+            Method: GET
+        Members:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/members
+            Method: GET
+        Invite:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/invitations
+            Method: POST
+        ReadInvitation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/invitations/{token}
+            Method: GET
+        AcceptInvitation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/invitations/{token}/accept
+            Method: POST
+        ChangeRole:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/members/{subject}
+            Method: PATCH
+        RemoveMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/team/members/{subject}
+            Method: DELETE
 
   OnboardingPoolPolicy:
     Type: AWS::IAM::Policy
@@ -317,6 +430,9 @@ Resources:
               - Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:ConditionCheckItem]
                 Resource: !GetAtt CatalogTable.Arn
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt TeamFunction.Arn
 
   CatalogFunction:
     Type: AWS::Serverless::Function
@@ -327,6 +443,7 @@ Resources:
       Environment:
         Variables:
           CATALOG_TABLE: !Ref CatalogTable
+          TEAM_FUNCTION_NAME: !Ref TeamFunction
       LoggingConfig:
         LogGroup: !Ref CatalogLogGroup
       Events:
@@ -377,7 +494,7 @@ Resources:
                 Resource: !GetAtt QuotesTable.Arn
               - Effect: Allow
                 Action: lambda:InvokeFunction
-                Resource: !GetAtt CatalogFunction.Arn
+                Resource: [!GetAtt CatalogFunction.Arn, !GetAtt TeamFunction.Arn]
 
   QuotesFunction:
     Type: AWS::Serverless::Function
@@ -389,6 +506,7 @@ Resources:
         Variables:
           QUOTES_TABLE: !Ref QuotesTable
           CATALOG_FUNCTION_NAME: !Ref CatalogFunction
+          TEAM_FUNCTION_NAME: !Ref TeamFunction
       LoggingConfig:
         LogGroup: !Ref QuotesLogGroup
       Events:
@@ -624,6 +742,21 @@ Resources:
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+  TeamErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama membership service errors require investigation.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref TeamFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
 
 Outputs:
   PublicUrl:
@@ -646,3 +779,5 @@ Outputs:
     Value: !Ref QuotesFunction
   OnboardingFunctionName:
     Value: !Ref OnboardingFunction
+  TeamFunctionName:
+    Value: !Ref TeamFunction

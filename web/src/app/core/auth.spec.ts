@@ -5,6 +5,7 @@ import { Auth, safeReturnPath } from './auth';
 import { authInterceptor } from './auth.interceptor';
 import { RuntimeConfig } from './runtime-config';
 import { DOCUMENT } from '@angular/common';
+import { WorkspaceContext } from './workspace-context';
 
 describe('authentication boundaries', () => {
   it('starts registration with a fresh PKCE state and the existing callback contract', async () => {
@@ -41,7 +42,7 @@ describe('authentication boundaries', () => {
     const exchange = vi.fn(async () => ({ ok: true, json: async () => ({ access_token: 'opaque-access-token', expires_in: 900 }) }));
     vi.stubGlobal('fetch', exchange);
     try {
-      TestBed.configureTestingModule({ providers: [provideHttpClient()] });
+      TestBed.configureTestingModule({ providers: [provideHttpClient(), { provide: WorkspaceContext, useValue: { load: async () => {}, reset: () => {}, role: () => 'reader' } }] });
       TestBed.inject(RuntimeConfig).settings.set({ productName: 'CotiTrama', demo: false, auth: { domain: 'https://auth.example', clientId: 'client', redirectUri: 'https://app.example/auth/callback', logoutUri: 'https://app.example' } });
       sessionStorage.setItem('cotitrama.pkce', JSON.stringify({ state: 'new-state', verifier: 'original-verifier', next: '/catalogos', createdAt: Date.now() }));
       history.replaceState(null, '', '/auth/callback?code=single-use-code&state=new-state');
@@ -80,13 +81,18 @@ describe('authentication boundaries', () => {
 
   it('attaches a bearer token only to this product business API', () => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), { provide: Auth, useValue: { bearer: () => 'test-token' } }] });
+    const workspace = TestBed.inject(WorkspaceContext);
+    workspace.memberships.set([{ organizationId: 'org-a', role: 'seller' }]);
+    workspace.select('org-a');
     const http = TestBed.inject(HttpClient); const control = TestBed.inject(HttpTestingController);
     http.get('/api/v1/catalogs').subscribe();
     const business = control.expectOne('/api/v1/catalogs');
     expect(business.request.headers.get('Authorization')).toBe('Bearer test-token'); business.flush({ catalogs: [] });
+    expect(business.request.headers.get('X-Organization-Id')).toBe('org-a');
     http.get('https://outside.example/api/v1/catalogs').subscribe();
     const external = control.expectOne('https://outside.example/api/v1/catalogs');
-    expect(external.request.headers.has('Authorization')).toBe(false); external.flush({});
+    expect(external.request.headers.has('Authorization')).toBe(false);
+    expect(external.request.headers.has('X-Organization-Id')).toBe(false); external.flush({});
     control.verify();
   });
 });

@@ -4,9 +4,9 @@ import { httpHandler, jsonBody, requireId, response, idempotencyKey, quoteReques
 import { notFound } from '../shared/errors.mjs';
 import { calculatePrice } from './domain/price.mjs';
 
-export function createQuotingHandler({repository,readCatalog,clock=()=>new Date(),newId=randomUUID}) {
+export function createQuotingHandler({repository,readCatalog,authorize=identity,clock=()=>new Date(),newId=randomUUID}) {
   return httpHandler(async(event,correlationId)=>{
-    const user=identity(event);
+    const user=await authorize(event);
     const method=event.requestContext?.http?.method;
     const path=event.rawPath;
     const lookup=/^\/api\/v1\/quotes\/([^/]+)$/.exec(path);
@@ -40,6 +40,6 @@ export function createQuotingHandler({repository,readCatalog,clock=()=>new Date(
 
 let configured;
 export async function handler(event) {
-  configured ??= import('../shared/dynamo.mjs').then(async({createQuoteRepository,createCatalogReader})=>createQuotingHandler({repository:await createQuoteRepository(),readCatalog:await createCatalogReader()}));
+  configured ??= Promise.all([import('../shared/dynamo.mjs'),import('../shared/team-client.mjs')]).then(([{createQuoteRepository,createCatalogReader},{createTeamAuthorizer}])=>createQuotingHandler({repository:createQuoteRepository(),readCatalog:createCatalogReader(),authorize:createTeamAuthorizer()}));
   return (await configured)(event);
 }

@@ -3,9 +3,9 @@ import { httpHandler, jsonBody, requireId, versionNumber, response, validId } fr
 import { badRequest, notFound } from '../shared/errors.mjs';
 import { validateCatalog } from '../quoting/domain/price.mjs';
 
-export function createCatalogHandler({repository}) {
+export function createCatalogHandler({repository,authorize=identity}) {
   const publicHandler = httpHandler(async(event, correlationId) => {
-    const user = identity(event);
+    const user = await authorize(event);
     const method = event.requestContext?.http?.method;
     const path = event.rawPath;
     if (method === 'GET' && path === '/api/v1/catalogs') return response(200,{catalogs:await repository.list(user.organizationId)},correlationId);
@@ -40,6 +40,6 @@ export function createCatalogHandler({repository}) {
 
 let configured;
 export async function handler(event) {
-  configured ??= import('../shared/dynamo.mjs').then(({createCatalogRepository})=>createCatalogRepository()).then(repository=>createCatalogHandler({repository}));
+  configured ??= Promise.all([import('../shared/dynamo.mjs'),import('../shared/team-client.mjs')]).then(([{createCatalogRepository},{createTeamAuthorizer}])=>createCatalogHandler({repository:createCatalogRepository(),authorize:createTeamAuthorizer()}));
   return (await configured)(event);
 }
