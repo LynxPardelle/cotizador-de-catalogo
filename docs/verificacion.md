@@ -2,11 +2,45 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
-## Incorporación de organizaciones preseleccionadas: preparación de la entrega
+## Última entrega de runtime: incorporación y preparación del piloto
 
-Implementación de preparación en ApplicationsFunction y de las rutas Angular `/piloto/preparacion/<referencia>` y `/piloto/incorporacion/<referencia>`. Mantiene ocho Lambdas, cuatro tablas y siete alarmas. El contacto debe coincidir con el correo actual confirmado/verificado y autoriza un espacio donde administre actualmente; las comprobaciones técnicas y los acuerdos manuales quedan separados. La [decisión de incorporación](architecture/007-incorporacion-del-piloto.md) define los límites.
+Runtime **f0867df971855bc6fa9289df35acfd80313602e0**, con SourceCommit coincidente y stack UPDATE_COMPLETE. Su [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44677571819) pasó. Los commits posteriores de evidencia no cambian el runtime.
 
-Validación local: **299 pruebas correctas** (190 servicios/herramientas, 107 Angular y dos de paquete), compilación SSR y smoke de rutas profundas correctos. El bundle inicial mide 372.64 kB, transferencia estimada 100.36 kB; el componente nuevo queda dentro del presupuesto de estilos. SAM detectó una referencia errónea al recurso API en los eventos nuevos antes de preparar un despliegue; se corrigió a ProductApi. La aceptación AWS/navegador de este incremento se registra después del despliegue. Stripe sigue pendiente; no hay resultados humanos del piloto.
+Preparación implementada, desplegada y verificada en ApplicationsFunction y las rutas Angular `/piloto/preparacion/<referencia>` y `/piloto/incorporacion/<referencia>`. Mantiene ocho Lambdas, cuatro tablas y siete alarmas. El contacto debe coincidir con el correo actual confirmado/verificado y autoriza un espacio donde administre actualmente; las comprobaciones técnicas y los acuerdos manuales quedan separados. La [decisión de incorporación](architecture/007-incorporacion-del-piloto.md) define los límites.
+
+Validación local: **299 pruebas correctas** (190 servicios/herramientas, 107 Angular y dos de paquete), compilación SSR y smoke de rutas profundas correctos. El bundle inicial mide 372.64 kB, transferencia estimada 100.36 kB; el componente nuevo queda dentro del presupuesto de estilos. SAM empaquetó las ocho funciones y las rutas nuevas usan ProductApi. Lint y revisión independiente correctos. El changeset añadió seis permisos propios de las rutas, sin eliminaciones ni reemplazos de tablas/pool; los cambios de las tablas fueron sólo etiquetas. Stripe sigue pendiente; no hay resultados humanos del piloto.
+
+### AWS: cinco bloques de incorporación
+
+`tools/preparation-smoke.mjs --verify` usó tres cuentas sintéticas con correo suprimido, una solicitud ficticia cuyo contacto es una de ellas, su espacio propio y un catálogo propio:
+
+1. La recepción pública conserva su original y deadline. La preparación exige preselección. Las seis rutas nuevas rechazan al anónimo con 401; otro administrador no obtiene permiso de operación y otro correo, aunque tenga permiso de operador, no puede usar la ruta del contacto.
+2. El contacto consulta sólo sus espacios administrados, rechaza un espacio ajeno y consentimientos incompletos, y vincula uno expresamente. Replay conserva versión/consentimiento; cambiar la intención con el mismo UUID produce 409. No se crean cuentas o membresías por esa vinculación.
+3. Publicar y autorizar catálogo y confirmar acuerdos todavía deja preparación incompleta si falta el vendedor. Crear y aceptar su invitación manual mediante Equipo incorpora a la segunda cuenta en el espacio correcto y permite obtener estado ready con dos miembros verificados. El DTO de operación no incluye roster, correos, productos, reglas o precios.
+4. Cambiar vendedor a lector, deshabilitar su cuenta o archivar el catálogo elimina el requisito correspondiente en la siguiente comprobación; restaurarlo recupera la preparación. Publicar v2 mantiene elegida la revisión v1 del piloto.
+5. Retirar la preselección pausa ambas vistas. Tras restaurarla, dos acuerdos concurrentes con la misma versión dan un 200 y un 409; restaurar los acuerdos deja preparación v5 e historial de cinco eventos. Registro, consentimiento de recepción, hash, estado público y TTL original permanecen intactos, incluidos los hijos de preparación.
+
+Las funciones de negocio se invocaron por IAM con envelopes HTTP API v2 sintéticos. La recepción y las denegaciones anónimas usaron la URL pública. Los bordes de expiración, presupuestos de lectura e historiales paginados también se comprobaron localmente; no se simulan volúmenes comerciales ni productividad humana.
+
+### Navegadores con JWT real
+
+Se abrieron dos sesiones separadas con las cuentas QA de operador y contacto, usando el login normal de Cognito y PKCE. Sus credenciales fueron generadas únicamente para esta aceptación y no se imprimieron. No se leyeron ni introdujeron contraseña o códigos de una persona. La aceptación anterior del correo real es un antecedente distinto, no una entrega de correo repetida por estas cuentas con SUPPRESS.
+
+- El operador abrió la preparación. Intentar acceder con esa misma cuenta a la ruta de contacto devolvió indisponibilidad sin exponer la solicitud; su permiso de operador no reemplaza la coincidencia del correo.
+- El contacto abrió la incorporación por HTTP API con JWT real. Guardar catálogo sin autorización mostró la validación; autorizarlo guardó v6 y, en una segunda intención explícita, v7.
+- El operador conservó un borrador de fecha mientras el contacto actualizaba v6 → v7. Guardar produjo el conflicto esperado y conservó fecha/acuerdos. La recarga explícita mostró v7 y permitió guardar v8, fecha prevista ficticia 2026-11-23 y todos los acuerdos.
+- Recargar conservó v8 y su historial. `--verify-browser` comprobó en AWS la fecha exacta, el evento final y el original/deadlines intactos.
+- El contacto abrió Equipo desde la incorporación y vio únicamente su administrador y vendedor sintéticos. En Catálogos consultó la última revisión v2 publicada; al regresar, la preparación mantuvo v1 y mostró v8/ready.
+
+Las pantallas indican Lista para coordinar el inicio y que los catorce días no comienzan automáticamente. La fecha de aceptación es ficticia; no se acordó una fecha real con participantes.
+
+### Limpieza y operación final
+
+Se cerraron ambas sesiones QA y sólo la pestaña secundaria creada para esta prueba. `--cleanup` eliminó la partición exacta de interés con sus eventos/replays y las tres cuentas sintéticas y sus grupos propios vacíos. Conservó DAILY y la evidencia comercial sintética de catálogo/pertenencias; no se borraron organizaciones o solicitudes reales. Los archivos privados de credenciales y manifiesto se retiraron.
+
+La cuenta real designada conservó estado habilitado/CONFIRMED/correo verificado, grupo de operador, perfil y pertenencia admin propios. La pestaña principal quedó en `/piloto/solicitudes` sin sesión QA, lista para que el operador entre con su cuenta. Las siete alarmas terminaron en OK y el TTL sigue ENABLED sobre expiresAt. Testing/main y los demás proyectos no recibieron cambios. Stripe continúa pendiente.
+
+Evidencia local ignorada: `artifacts/preparation-preflight.json`, `artifacts/preparation-changeset.json`, `artifacts/preparation-smoke.json`, `artifacts/preparation-browser.json`, `artifacts/preparation-real-operator-check.json` y capturas `cotitrama-incorporacion-contacto.jpg`, `cotitrama-incorporacion-lista.jpg`, `cotitrama-preparacion-conflicto.jpg` y `cotitrama-preparacion-lista.jpg`. El informe anterior de cuotas se conservó como `artifacts/quota-smoke-before-preparation-20261119.json`.
 
 ## Entrega anterior: gestión privada de solicitudes
 

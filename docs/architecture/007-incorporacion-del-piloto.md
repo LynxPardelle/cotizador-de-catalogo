@@ -1,6 +1,6 @@
 # Incorporación y preparación de organizaciones del piloto
 
-Decisión del 19 de noviembre de 2026. Amplía la revisión de solicitudes preseleccionadas con vinculación consentida de un espacio, comprobación de accesos y catálogo, y seguimiento de los acuerdos del protocolo. Se conserva el dominio de Solicitudes, ApplicationsFunction e InterestTable: ocho Lambdas y cuatro tablas. La aceptación observada por entrega se registra en [Verificación](../verificacion.md). Stripe sigue pendiente.
+Decisión del 19 de noviembre de 2026. Amplía la revisión de solicitudes preseleccionadas con vinculación consentida de un espacio, comprobación de accesos y catálogo, y seguimiento de los acuerdos del protocolo. Implementada, desplegada y verificada en development con AWS y dos sesiones de navegador autenticadas mediante JWT real. Se conserva el dominio de Solicitudes, ApplicationsFunction e InterestTable: ocho Lambdas y cuatro tablas. La aceptación y sus límites se registran en [Verificación](../verificacion.md). Stripe sigue pendiente.
 
 ## Responsables y recorrido
 
