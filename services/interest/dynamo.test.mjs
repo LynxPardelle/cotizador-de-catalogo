@@ -39,7 +39,7 @@ test('persistent capacity contention is bounded and fails without partial receip
   const client=fake(command=>command.constructor.name==='TransactWriteCommand'?cancellation():command.input.Key.PK.startsWith('DAILY#')?{Item:{used:1}}:{});
   await assert.rejects(repository(client).submit(record,'hash',{period,limit:200}),{statusCode:503,code:'INTEREST_BUSY'});assert.equal(client.commands.filter(command=>command.constructor.name==='TransactWriteCommand').length,5);
 });
-test('malformed capacity state fails closed without returning a false success or retrying a damaged counter',async()=>{
+test('a canceled transaction with malformed retrieved capacity returns busy instead of a false success',async()=>{
   for(const used of [-1,1.5,'1',undefined]){
     const client=fake(command=>command.constructor.name==='TransactWriteCommand'?cancellation():command.input.Key.PK.startsWith('DAILY#')?{Item:{used}}:{});
     await assert.rejects(repository(client).submit(record,'hash',{period,limit:200}),{statusCode:503,code:'INTEREST_BUSY'});assert.equal(client.commands.filter(command=>command.constructor.name==='TransactWriteCommand').length,1);

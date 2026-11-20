@@ -2,6 +2,49 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
+## Última entrega de runtime: convocatoria y formulario de interés
+
+Formulario público: **https://cotitrama-dev.lynxpardelle.com/piloto/interes**. Runtime final **b8f1c96faf602e07c279849cdb5dc5361d0d318c**, con SourceCommit coincidente y stack UPDATE_COMPLETE. Su [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44643192043) terminó correctamente. La recepción se aceptó inicialmente con `181626a3e88c04c74478ae79027028f654d6037b`, cuya [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44642205007) también pasó; el runtime final añade únicamente el ajuste visual descrito abajo. Los commits de evidencia posteriores no cambian el runtime.
+
+La [convocatoria redactada](piloto/convocatoria.md) contiene correo completo y mensaje breve para WhatsApp/LinkedIn. **No se enviaron invitaciones a personas ni se publicaron mensajes en canales externos.** La landing enlaza el formulario de interés sin exigir una cuenta. Las solicitudes se reciben en InterestFunction/InterestTable, separadas de las cuentas y del negocio; la selección del piloto y toda comunicación posterior son manuales. Stripe continúa pendiente.
+
+### Validación local y CI de convocatoria
+
+| Comprobación | Resultado |
+| --- | --- |
+| Servicios y herramientas | 127 pruebas correctas: incluye 16 del nuevo dominio, siete de consulta/exportación privada y dos guardas del smoke. |
+| Angular | 73 pruebas correctas en 15 archivos, diez específicas del interés público. |
+| Empaquetado | Dos pruebas correctas. |
+| Total | **202 pruebas correctas**. |
+| Build SSR | Compilación y empaquetado correctos; 365.59 kB iniciales, transferencia estimada 99.52 kB. |
+| SSR | Ruta /piloto/interes incluida en el smoke; formulario inicial sin valores de solicitantes ni tokens. |
+| SAM/CloudFormation | Siete funciones compiladas, lint correcto y changesets sin eliminaciones ni reemplazos de tablas/pool. Se añade la tabla de interés con TTL y seis recursos propios en la entrega inicial. |
+
+Las pruebas locales verifican esquema exacto de diez propiedades, 8 KB, consentimiento versionado, normalización, respuesta sin datos personales, replay/concurrencia, conflicto por contenido, límite diario UTC de 200 y contención acotada. El cliente mantiene el envío para reintentos ambiguos, red, 5xx y 429. Un rechazo inicial definitivo 400/413 permite corregir campos. No se hace una prueba de carga ni se preparan contadores de producción; el límite diario y su reinicio se comprueban localmente.
+
+### AWS y navegador
+
+El helper `tools/interest-smoke.mjs` completó cuatro comprobaciones a través de la URL pública:
+
+1. POST anónimo válido: recibo 202 con sólo referencia y estado received. Lectura IAM posterior confirma persistencia, autorización/fecha del servidor y expiresAt a 90 días.
+2. Replay idéntico conserva el primer registro; otro contenido con la misma referencia produce 409 sin sustituirlo.
+3. Consentimiento falso, versión de aviso anterior y propiedades desconocidas producen 400 sin escribir un registro.
+4. GET del formulario API y de una referencia no permite leer solicitudes: 404. El API comercial de catálogos conserva 401 sin JWT.
+
+La quinta comprobación se hizo desde el navegador sin sesión: la landing abre el formulario; vacío y sin autorización no se envía. Una organización ficticia con disponibilidad **Por confirmar** recibió la referencia `87fce639-9f9a-4fba-9944-b6a5521d36c7`. El recibo no mostró el correo, no afirmó admisión y explicó que no enviaría un correo automático. La lectura IAM confirmó esos datos y su caducidad. Recargar mostró nuevamente el formulario vacío, la autorización desmarcada y los controles habilitados.
+
+`--list` mostró únicamente dos recibos sintéticos con metadatos, sin datos de contacto. `--export` generó el JSON privado sólo para la referencia pedida; se verificó el contenido ficticio y se retiró el archivo. El TTL de la tabla quedó ENABLED sobre expiresAt. La configuración desplegada limita esta ruta a 2 solicitudes/segundo y ráfaga 5; las demás conservan 15/30. No hay búsqueda pública de correos, creación de cuentas/membresías o envío de mensajes por la Lambda.
+
+La prueba visual encontró que una regla global de desgloses monetarios heredaba white-space: nowrap en las descripciones del piloto. En el ancho observado, el texto más largo ocupaba 640 px dentro de una columna de 327 px e invadía el formulario. La corrección se limita a `.interest-expectations dd`: white-space normal. En el runtime final, las tres descripciones tienen ancho de contenido y columna de 327 px, sin desbordamiento; se guardó una captura nueva del formulario vacío.
+
+### Limpieza y alcance
+
+Cleanup eliminó sólo los dos registros ficticios registrados por referencia, namespace y hash. El listado posterior quedó vacío; se conservó el contador diario de aceptaciones, sin decrementarlo. No quedan exportaciones privadas de esta verificación. El pool de development permaneció en cero usuarios y las seis alarmas del stack cerraron en OK. No se modificaron testing, main, Stripe ni otros proyectos.
+
+Evidencia local ignorada por Git: `artifacts/interest-tests.log`, `artifacts/interest-web-tests.log`, `artifacts/interest-build-final.log`, `artifacts/interest-sam-build-final.log`, `artifacts/interest-changeset.json`, `artifacts/interest-changeset-final.json`, `artifacts/interest-smoke.json`, `artifacts/interest-operator-qa.json`, `artifacts/interest-final-state.json`, `artifacts/cotitrama-convocatoria-recibo.jpg` y `artifacts/cotitrama-convocatoria-formulario-final.jpg`.
+
+TASK-014 prepara la convocatoria y una recepción técnica verificada. Los datos son ficticios: sector, destinatarios/canal de difusión, organizaciones seleccionadas, personas, autorizaciones y fecha siguen pendientes. No completa el piloto humano de TASK-006 ni valida demanda o disposición a pagar.
+
 ## Preparación del piloto con usuarios
 
 Preparada el 19/11/2026 en development, sin cambios de runtime. TASK-013 deja un [protocolo](piloto/protocolo.md), [catorce casos funcionales](piloto/casos-de-prueba.md), [guía para primeros usuarios](piloto/guia-primeros-usuarios.md), [catálogo ficticio de práctica](piloto/catalogo-practica.json) y [cuatro plantillas vacías](piloto/plantillas/README.md). TASK-006 sigue pendiente: no hay participantes convocados, inicio confirmado ni resultados humanos de esta cohorte.
@@ -20,7 +63,7 @@ La revisión aclaró que los tiempos agotados o la ayuda no equivalen por sí so
 
 Este paquete prepara la ejecución y una decisión de avanzar a otra cohorte controlada, iterar o detener para corregir; no constituye una publicación en producción ni validación de demanda o precio. Stripe permanece pendiente. El runtime de referencia y su aceptación AWS anterior se conservan a continuación; esta entrega no ejecuta un nuevo despliegue ni modifica otros proyectos.
 
-## Última entrega de runtime: métricas del piloto
+## Evidencia previa: métricas del piloto
 
 Runtime desplegado: **7dbffa9b9fdda31212be56a8e658e3d6f956dcda**, con SourceCommit coincidente y estado UPDATE_COMPLETE en cotitrama-development. La [CI del runtime](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44634469521) terminó correctamente. Los commits posteriores de evidencia no cambian el runtime.
 

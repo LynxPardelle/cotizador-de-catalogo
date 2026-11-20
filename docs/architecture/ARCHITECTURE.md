@@ -4,7 +4,7 @@ Microservicios serverless en AWS, con Angular SSR alojado en Lambda. La base com
 
 El incremento de métricas del piloto está **desplegado y verificado en development con AWS y navegador autenticado mediante JWT real**. La aceptación del runtime `7dbffa9` usa fixtures sintéticos y actividad automatizada, sin acreditar productividad humana. Reutiliza el servicio y la tabla de Cotizaciones, sin un nuevo dominio, tabla ni índice global. Sus resultados están en [Verificación](../verificacion.md).
 
-La convocatoria y el formulario público de interés están implementados; la aceptación de esta entrega en AWS y navegador está **en validación**. La plantilla incorpora `InterestFunction` y su tabla propia `InterestTable`: siete Lambdas y cuatro tablas en total. Equipo e Incorporación siguen siendo entradas del mismo dominio de identidad y conservan `MembersTable`; Interés no puede leer ni modificar esa tabla, los catálogos o las propuestas.
+La preparación de la convocatoria y el formulario público de interés está completa. La captura está **desplegada y verificada en development con AWS y navegador**, sobre el runtime `b8f1c96faf602e07c279849cdb5dc5361d0d318c` y su CI verde. Las solicitudes de aceptación son ficticias; la invitación sigue sin enviarse a terceros. La plantilla incorpora `InterestFunction` y su tabla propia `InterestTable`: siete Lambdas y cuatro tablas en total. Equipo e Incorporación siguen siendo entradas del mismo dominio de identidad y conservan `MembersTable`; Interés no puede leer ni modificar esa tabla, los catálogos o las propuestas.
 
 ```mermaid
 flowchart LR

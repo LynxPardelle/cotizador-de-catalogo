@@ -1,6 +1,6 @@
 # Piloto con primeros usuarios de CotiTrama
 
-Versión 1.0, preparada el 19 de noviembre de 2026. **Preparación documental completa; convocatoria y ejecución pendientes.** No hay participantes, autorizaciones, resultados humanos ni fecha de inicio confirmados en este repositorio. Los tamaños y umbrales siguientes son decisiones propuestas para este primer piloto exploratorio, no resultados observados ni estándares del mercado.
+Versión 1.0, preparada el 19 de noviembre de 2026. **Preparación documental completa; difusión de la convocatoria, selección y ejecución pendientes.** La [invitación y el formulario de interés](convocatoria.md) están preparados. No hay participantes, autorizaciones, resultados humanos ni fecha de inicio confirmados en este repositorio. Los tamaños y umbrales siguientes son decisiones propuestas para este primer piloto exploratorio, no resultados observados ni estándares del mercado.
 
 Ambiente: [CotiTrama development](https://cotitrama-dev.lynxpardelle.com/). El piloto continúa sin cargos; Stripe y la contratación siguen pendientes. Esta preparación no cambia el runtime ni promueve testing/main. El flujo de promoción permanece development → testing → main.
 
