@@ -1,0 +1,57 @@
+<a class="skip-link" href="#solicitudes">Ir a las solicitudes</a>
+<header class="interest-header applications-header">
+  <a routerLink="/" class="brand" aria-label="CotiTrama, inicio"><span class="brand-mark" aria-hidden="true">ct</span>CotiTrama</a>
+  <div class="session-actions"><a routerLink="/cotizar" class="text-link">Volver a cotizar →</a>@if(signedIn()){<button class="text-button" type="button" (click)="auth.logout()">Cerrar sesión</button>}</div>
+</header>
+<main id="solicitudes" class="applications-page" tabindex="-1">
+  <div class="applications-heading"><div><p class="eyebrow">Operación del piloto</p><h1>Solicitudes del piloto</h1><p class="muted">Revisa el interés de cada organización y registra el siguiente paso.</p></div>@if(ready()&&signedIn()&&access.allowed()){<button type="button" class="secondary compact" (click)="refresh()" [disabled]="access.busy()||listBusy()||saving()||!!pending()">Actualizar acceso y lista</button>}</div>
+  @if(!ready()){<p class="notice" role="status">El panel privado se abre al iniciar la aplicación en tu navegador.</p>}
+  @else if(!signedIn()){
+    <section class="applications-access"><p class="eyebrow">Panel privado</p><h2>Inicia sesión para revisar solicitudes</h2><p>Necesitas una cuenta con permiso específico de operación del piloto.</p><button type="button" [disabled]="auth.busy()" (click)="auth.login('/piloto/solicitudes')">Iniciar sesión</button></section>
+  }@else if(access.busy()&&!access.allowed()){<p class="notice" role="status">Comprobando el permiso de operación…</p>}
+  @else if(!access.allowed()){
+    <section class="applications-access"><h2>{{access.state()==='error'?'No pudimos comprobar el acceso':'Acceso de operación requerido'}}</h2><p>{{access.state()==='error'?'Reintenta cuando la conexión esté disponible.':'Administrar una organización no concede acceso a las solicitudes. Este panel requiere un permiso separado de operación del piloto.'}}</p><button type="button" class="secondary" [disabled]="access.busy()" (click)="refresh()">Volver a comprobar acceso</button></section>
+  }@else{
+    <p class="applications-boundary">Seguimiento interno y manual. No envía correos, crea cuentas, incorpora miembros ni confirma admisiones al piloto.</p>
+    <div class="applications-layout">
+      <section class="applications-queue" aria-labelledby="queue-title" [attr.aria-busy]="listBusy()">
+        <div class="applications-queue-heading"><h2 id="queue-title">Organizaciones interesadas</h2><label for="application-filter">Estado</label><select id="application-filter" [value]="filter()" (change)="changeFilter($any($event.target).value)" [disabled]="listBusy()||saving()||!!pending()"><option value="all">Todos los estados</option>@for(status of contract.statuses;track status.id){<option [value]="status.id">{{status.label}}</option>}</select></div>
+        <p class="applications-page-note">{{items().length}} solicitudes cargadas. La consulta recorre páginas limitadas; no representa un total global ni un orden de prioridad.</p>
+        @if(listError()){<p class="notice error" role="alert">{{listError()}} <button class="text-button" type="button" (click)="nextCursor()?more():refresh()">Reintentar</button></p>}
+        @if(listBusy()&&!items().length){<p role="status">Cargando solicitudes…</p>}
+        @else if(!items().length&&!nextCursor()&&!listError()){<p class="applications-empty">No hay solicitudes disponibles para este filtro.</p>}
+        @else if(!items().length&&nextCursor()){<p class="applications-empty">Sin coincidencias en las páginas recorridas. Continúa para revisar las siguientes.</p>}
+        <ul class="applications-list">@for(item of items();track item.reference){<li><button type="button" class="applications-select" [class.selected]="detail()?.reference===item.reference" [attr.aria-pressed]="detail()?.reference===item.reference" [disabled]="saving()||!!pending()" (click)="open(item.reference)"><span class="applications-item-title">{{item.organizationName}}</span><span class="applications-item-sector">{{item.sector}}</span><span class="applications-item-meta"><span class="status-pill">{{statusLabel(item.review.status)}}</span><span>{{item.createdAt|date:'dd MMM yyyy':'UTC'}}</span></span>@if(item.review.nextActionDate){<span [class.applications-overdue]="overdue(item.review.nextActionDate)">Siguiente paso: {{item.review.nextActionDate}}{{overdue(item.review.nextActionDate)?' · Vencido':''}}</span>}<span class="applications-ref">{{item.reference}}</span></button></li>}</ul>
+        @if(nextCursor()){<button type="button" class="secondary applications-more" (click)="more()" [disabled]="listBusy()||saving()||!!pending()">{{listBusy()?'Cargando…':'Cargar más'}}</button>}
+      </section>
+      <section class="applications-detail" aria-labelledby="detail-title" [attr.aria-busy]="detailBusy()">
+        @if(detailError()){<p class="notice error" role="alert">{{detailError()}}</p>}
+        @if(detailBusy()){<p role="status">Cargando detalle e historial…</p>}
+        @if(detail();as selected){
+          <p class="eyebrow">Solicitud original · sólo lectura</p><h2 id="detail-title">{{selected.application.organizationName}}</h2><p class="applications-reference">{{selected.reference}}</p>
+          <dl class="applications-facts">
+            <div><dt>Correo de contacto</dt><dd>{{selected.application.contactEmail}}</dd></div><div><dt>Sector</dt><dd>{{selected.application.sector}}</dd></div>
+            <div><dt>Cómo cotiza hoy</dt><dd>{{choiceLabel('currentMethods',selected.application.currentMethod)}}</dd></div><div><dt>Cotizaciones al mes</dt><dd>{{choiceLabel('monthlyQuoteRanges',selected.application.monthlyQuotes)}}</dd></div>
+            <div><dt>Dos participantes</dt><dd>{{choiceLabel('availabilityOptions',selected.application.twoParticipants)}}</dd></div><div><dt>Tiempo para probar</dt><dd>{{choiceLabel('availabilityOptions',selected.application.timeAvailability)}}</dd></div>
+            <div><dt>Recibida</dt><dd>{{selected.application.createdAt|date:'dd MMM yyyy, HH:mm':'UTC'}} UTC</dd></div><div><dt>Contacto autorizado</dt><dd>{{selected.application.contactConsent?'Sí':'No'}} · aviso {{selected.application.privacyVersion}}</dd></div>
+            <div><dt>Conservación hasta</dt><dd>{{selected.application.expiresAt*1000|date:'dd MMM yyyy, HH:mm':'UTC'}} UTC</dd></div><div><dt>Versión del seguimiento</dt><dd>{{selected.review.version}} · {{selected.review.updatedAt|date:'dd MMM yyyy, HH:mm':'UTC'}} UTC</dd></div>
+          </dl>
+          <section class="applications-followup" aria-labelledby="followup-title"><h3 id="followup-title">Registrar seguimiento</h3><p class="muted">Los datos enviados por la organización se conservan tal como llegaron.</p>
+            @if(conflict()){<div class="notice error" role="alert"><p>{{saveError()}}</p><button type="button" class="secondary" (click)="reloadConflict()" [disabled]="detailBusy()">Recargar versión vigente</button><p class="applications-page-note">Conservaremos tu edición para que la compares con el estado vigente antes de guardar.</p></div>}
+            @else if(saveError()){<p class="notice error" role="alert">{{saveError()}}</p>}
+            @if(success()){<p class="notice success" role="status">{{success()}}</p>}
+            <form (submit)="save($event)" novalidate>
+              <div class="applications-fields"><div><label for="review-status">Estado</label><select id="review-status" [formField]="fields.status">@for(status of contract.statuses;track status.id){<option [value]="status.id">{{status.label}}</option>}</select></div><div><label for="review-date">Siguiente acción</label><input type="date" id="review-date" [formField]="fields.nextActionDate" aria-describedby="review-date-help"><p id="review-date-help" class="field-help">Fecha de calendario UTC. Puedes dejarla vacía.</p></div></div>
+              <label for="review-note">Nota interna <span class="muted">(opcional)</span></label><textarea id="review-note" rows="4" [formField]="fields.note" aria-describedby="review-note-help review-note-count"></textarea><div class="applications-note-meta"><p id="review-note-help" class="field-help">No incluyas credenciales, datos de pago ni datos personales de clientes.</p><span id="review-note-count">{{model().note.length}} / {{contract.maxNoteLength}}</span></div>
+              <button type="submit" [disabled]="saving()||detailBusy()||conflict()">{{saving()?'Guardando…':pending()?'Reintentar guardado':'Guardar seguimiento'}}</button>
+              @if(pending()&&!saving()){<p class="applications-page-note">El resultado está pendiente de confirmación. Los campos quedan bloqueados para reintentar la misma intención sin duplicarla.</p>}
+            </form>
+          </section>
+          <section class="applications-history" aria-labelledby="history-title"><h3 id="history-title">Historial de seguimiento</h3><p class="applications-page-note">Movimientos más recientes primero. Las notas sólo están disponibles para operación.</p>@if(!history().length){<p class="muted">Esta solicitud todavía no tiene movimientos de seguimiento.</p>}<ol>@for(entry of history();track entry.mutationId){<li><div class="applications-history-heading"><strong>{{statusLabel(entry.previousStatus)}} → {{statusLabel(entry.status)}}</strong><span>v{{entry.version}}</span></div><p class="applications-page-note">{{entry.createdAt|date:'dd MMM yyyy, HH:mm':'UTC'}} UTC · Operador {{entry.actorKey.slice(0,8)}}</p><p class="applications-page-note">Siguiente acción: {{entry.previousNextActionDate||'Sin fecha'}} → {{entry.nextActionDate||'Sin fecha'}}</p>@if(entry.note){<p class="applications-history-note">{{entry.note}}</p>}</li>}</ol>@if(historyError()){<p class="notice error" role="alert">{{historyError()}}</p>}@if(historyCursor()){<button class="secondary compact" type="button" (click)="moreHistory()" [disabled]="historyBusy()||saving()||!!pending()">{{historyBusy()?'Cargando…':'Cargar más movimientos'}}</button>}</section>
+        }@else if(!detailBusy()&&!detailError()){<div class="applications-empty-detail"><span class="brand-mark" aria-hidden="true">ct</span><h2 id="detail-title">Cada organización, un siguiente paso</h2><p>Selecciona una solicitud para consultar sus datos y registrar el seguimiento.</p></div>}
+      </section>
+    </div>
+  }
+  @if(auth.error()){<p class="notice error" role="alert">{{auth.error()}}</p>}
+</main>
+<footer class="interest-footer"><span>CotiTrama · Operación del piloto</span><span>Acceso privado · Seguimiento manual</span></footer>

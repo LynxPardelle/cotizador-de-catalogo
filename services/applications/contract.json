@@ -1,0 +1,12 @@
+{
+  "statuses": [
+    {"id":"received","label":"Recibida"},
+    {"id":"reviewing","label":"En revisión"},
+    {"id":"needs_info","label":"Por aclarar"},
+    {"id":"contacted","label":"Contactada"},
+    {"id":"selected","label":"Preseleccionada"},
+    {"id":"not_selected","label":"No seleccionada"},
+    {"id":"withdrawn","label":"Retirada"}
+  ],
+  "maxNoteLength":500
+}

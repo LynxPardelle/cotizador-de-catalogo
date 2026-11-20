@@ -12,6 +12,8 @@ import { accessSubject } from './shared/auth.mjs';
 import { HttpError } from './shared/errors.mjs';
 import { createInterestHandler } from './interest/index.mjs';
 import { createMemoryInterestRepository } from './interest/memory.mjs';
+import { createApplicationsHandler } from './applications/index.mjs';
+import { createMemoryApplicationsRepository } from './applications/memory.mjs';
 
 export async function createDemoServer() {
   if(process.env.AWS_LAMBDA_FUNCTION_NAME) throw new Error('The synthetic demo server cannot run in AWS Lambda.');
@@ -28,7 +30,10 @@ export async function createDemoServer() {
   };
   const catalog=createCatalogHandler({repository:repositories.catalog,authorize});
   const quoting=createQuotingHandler({repository:repositories.quotes,readCatalog:(org,id,version)=>repositories.catalog.getPublished(org,id,version),authorize});
-  const interest=createInterestHandler({repository:createMemoryInterestRepository()});
+  const interestItems=new Map();
+  const interest=createInterestHandler({repository:createMemoryInterestRepository({itemsMap:interestItems})});
+  // This authorizer exists only in the loopback synthetic demo, never in Lambda.
+  const applications=createApplicationsHandler({repository:createMemoryApplicationsRepository({itemsMap:interestItems}),authorize:async()=>({subject:demoSubject})});
   return createServer(async(req,res)=>{
     // The demo has no authentication and therefore serves loopback clients only.
     if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)) {res.writeHead(403);res.end();return;}
@@ -47,7 +52,7 @@ export async function createDemoServer() {
     try {
       for await(const chunk of req) {body+=chunk.toString();if(Buffer.byteLength(body)>200_000){res.writeHead(413);res.end();return;}}
       const event={version:'2.0',rawPath:path,rawQueryString:url.search.slice(1),queryStringParameters:Object.fromEntries(url.searchParams),headers:req.headers,body:body||undefined,requestContext:{requestId:randomUUID(),http:{method:req.method},authorizer:{jwt:{claims:{sub:demoSubject,token_use:'access','cognito:groups':['org:demo:admin']}}}}};
-      const response=path==='/health' || path==='/api/health' ? await health(event) : path.startsWith('/api/v1/pilot-interest') ? await interest(event) : path.startsWith('/api/v1/team') ? await team(event) : path.startsWith('/api/v1/catalogs') ? await catalog(event) : await quoting(event);
+      const response=path==='/health' || path==='/api/health' ? await health(event) : path.startsWith('/api/v1/pilot-applications') ? await applications(event) : path.startsWith('/api/v1/pilot-interest') ? await interest(event) : path.startsWith('/api/v1/team') ? await team(event) : path.startsWith('/api/v1/catalogs') ? await catalog(event) : await quoting(event);
       res.writeHead(response.statusCode,response.headers);res.end(response.body);
     } catch {
       res.writeHead(500,{'content-type':'application/json'});res.end(JSON.stringify({error:{code:'DEMO_ERROR',message:'No se pudo completar la operación de prueba.'}}));

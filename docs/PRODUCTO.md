@@ -48,6 +48,14 @@ La solicitud recoge nombre de organización, correo de contacto, sector, proceso
 
 La preparación de la invitación y el formulario está completa. La difusión con destinatarios y canal autorizados, las solicitudes de organizaciones reales, las personas, el sector definitivo y las fechas continúan pendientes. Esta captura no completa TASK-006 ni valida demanda o disposición a pagar. Stripe permanece pendiente. El [diseño de convocatoria](architecture/005-convocatoria-e-interes.md) documenta el contrato, los límites y el tratamiento de la información.
 
+## Gestión privada de las solicitudes
+
+El operador autorizado revisa `/piloto/solicitudes` con una cuenta confirmada y correo verificado. Este permiso es independiente del administrador de cada organización. La bandeja permite filtrar Recibida, En revisión, Por aclarar, Contactada, Preseleccionada, No seleccionada y Retirada, consultar los datos de contacto, fijar la próxima acción y conservar notas de seguimiento en un historial.
+
+Los estados reflejan decisiones registradas manualmente: Contactada no envía un mensaje, Preseleccionada no confirma una plaza ni crea una cuenta y Retirada no elimina el consentimiento original ni una cuenta. Antes de admitir participantes se aplican los acuerdos del protocolo. Las notas no deben contener contraseñas, datos de pago, catálogos de clientes ni información personal ajena al seguimiento autorizado.
+
+Cada actualización comprueba la versión observada; un conflicto requiere consultar la revisión actual antes de volver a guardar. Los reintentos idénticos conservan un solo evento. El registro recibido, la autorización de contacto y el plazo original de 90 días se mantienen, con eliminación TTL asíncrona. La [decisión de gestión privada](architecture/006-gestion-solicitudes-piloto.md) documenta los límites de acceso, paginación y retención. Esta herramienta no sustituye reclutar y observar usuarios reales; Stripe sigue pendiente.
+
 ## Origen
 
 Proyecto de origen propio basado en el problema comercial identificado en novo-calculator. Los contratos, nombres, datos de ejemplo y código son nuevos. No se reutiliza información comercial ajena.

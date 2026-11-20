@@ -11,6 +11,7 @@ Cotizaciones que conservan sus reglas. Publica catálogos versionados, configura
 - [Protocolo del piloto con usuarios](docs/piloto/protocolo.md)
 - [Guía para primeros usuarios](docs/piloto/guia-primeros-usuarios.md)
 - [Convocatoria e invitación del piloto](docs/piloto/convocatoria.md)
+- [Gestión privada de solicitudes](docs/architecture/006-gestion-solicitudes-piloto.md)
 - [Operación y despliegue](docs/operacion.md)
 - [Promoción development → testing → main](docs/promocion.md)
 
@@ -28,6 +29,8 @@ npm run demo
 Abre http://127.0.0.1:4200. La demostración usa únicamente un catálogo sintético y almacenamiento en memoria. Se reinicia al cerrar el proceso; no es persistencia de producción. Permite publicar revisiones, previsualizar, emitir y reabrir propuestas. El servidor queda ligado a loopback.
 
 El panel `/piloto` permite revisar las emisiones y las mediciones de esa sesión local. Sus filtros de 7, 30 y 90 días usan días calendario UTC; el servidor de demostración conserva esos parámetros y rechaza períodos duplicados.
+
+La demo enlaza también `/piloto/solicitudes`: una solicitud ficticia enviada en `/piloto/interes` aparece en su bandeja y admite seguimiento temporal. Este permiso sintético existe únicamente en el servidor loopback; la función desplegada exige JWT y un operador vigente del pool propio.
 
 Para trabajar sólo el frontend, `npm --prefix web start`; para probar el flujo completo usa la demostración anterior.
 
@@ -47,7 +50,7 @@ cfn-lint infra/template.yaml
 
 ## Nube
 
-Angular SSR se sirve desde una Lambda detrás de CloudFront/OAC. Catálogos y Cotizaciones son servicios Lambda separados, con contratos y tablas DynamoDB propias. Equipo e Incorporación pertenecen al dominio de identidad y operan su tabla `MembersTable`; los servicios consultan por IAM las pertenencias y roles actuales. La convocatoria incorpora `InterestFunction` y `InterestTable`, separadas de identidad y del negocio: la plantilla declara siete Lambdas y cuatro tablas. Cognito y API Gateway verifican la identidad de las rutas protegidas; los grupos antiguos del token no conceden permisos. El cliente puede seleccionar un espacio con `X-Organization-Id` únicamente si el servidor valida acceso. La recepción pública de interés no crea una cuenta ni una organización.
+Angular SSR se sirve desde una Lambda detrás de CloudFront/OAC. Catálogos y Cotizaciones son servicios Lambda separados, con contratos y tablas DynamoDB propias. Equipo e Incorporación pertenecen al dominio de identidad y operan su tabla `MembersTable`; los servicios consultan por IAM las pertenencias y roles actuales. La convocatoria incorpora `InterestFunction` y `ApplicationsFunction`, entradas pública y privada del mismo dominio con `InterestTable`, separadas de identidad y del negocio: la plantilla declara ocho Lambdas y cuatro tablas. Cognito y API Gateway verifican la identidad de las rutas protegidas; los grupos antiguos del token no conceden permisos. El cliente puede seleccionar un espacio con `X-Organization-Id` únicamente si el servidor valida acceso. La recepción pública de interés no crea una cuenta ni una organización.
 
 | Ambiente | Rama de promoción | Dirección prevista |
 | --- | --- | --- |
@@ -84,3 +87,9 @@ La [invitación está redactada y no enviada](docs/piloto/convocatoria.md). El f
 El endpoint devuelve sólo un recibo `202` con referencia y estado; no publica respuestas ni consulta si un correo ya existe. Los reintentos idénticos conservan el recibo y no consumen otra plaza de recepción. La tabla propia guarda el consentimiento versionado y una fecha TTL a 90 días; la eliminación por TTL es asíncrona. La ruta limita el caudal y la transacción aplica un máximo de 200 solicitudes nuevas por día UTC. El operador revisa metadatos y exporta una solicitud concreta por IAM a un archivo privado, sin CRM, aceptación, correo o alta automáticos. [Diseño de captura y privacidad](docs/architecture/005-convocatoria-e-interes.md).
 
 La preparación de la convocatoria y la captura está completa. Compartir la invitación con destinatarios y canal concretos autorizados, revisar organizaciones reales y confirmar sector, participantes y fecha siguen pendientes. TASK-006 y Stripe continúan pendientes; no hay contratación ni cobros.
+
+## Seguimiento privado del piloto
+
+`/piloto/solicitudes` incorpora una bandeja de revisión con filtros, detalle privado, estado, próxima acción e historial de notas. El acceso requiere el grupo de operador `cotitrama-pilot-reviewers`, asignado por IAM a una cuenta confirmada con correo verificado; administrar una organización no concede este permiso. El servidor consulta el permiso actual en cada operación, sin confiar en grupos antiguos del JWT. La [guía operativa](docs/operacion.md) explica la asignación y retirada.
+
+Las actualizaciones comprueban la versión y conservan un historial transaccional: dos revisores no sobrescriben cambios en silencio y un reintento idéntico no duplica eventos. La solicitud original, el consentimiento, el recibo público y la expiración se conservan. La bandeja carga páginas acotadas con continuación explícita, sin presentar el número cargado como total global. Los estados son seguimiento manual y no envían correo ni crean accesos, plazas o suscripciones. La verificación de esta entrega se registra en [Verificación](docs/verificacion.md); Stripe sigue pendiente.

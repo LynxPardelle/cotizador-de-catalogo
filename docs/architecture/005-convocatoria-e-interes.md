@@ -1,6 +1,6 @@
 # Convocatoria y solicitudes de interés
 
-Decisión del 19 de noviembre de 2026. Se prepara la convocatoria del piloto y una recepción pública de interés en development. Redactar una invitación no autoriza enviarla a contactos ni publicarla en redes. Una solicitud recibida no confirma una plaza, no crea una cuenta y no inicia el piloto. Stripe permanece pendiente.
+Decisión del 19 de noviembre de 2026. Se prepara la convocatoria del piloto y una recepción pública de interés en development. Redactar una invitación no autoriza enviarla a contactos ni publicarla en redes. Una solicitud recibida no confirma una plaza, no crea una cuenta y no inicia el piloto. Stripe permanece pendiente. La revisión inicial por IAM se amplía después con el [panel privado de seguimiento](006-gestion-solicitudes-piloto.md); esta decisión conserva el contrato de recepción pública.
 
 ## Experiencia y datos mínimos
 

@@ -4,7 +4,9 @@ Microservicios serverless en AWS, con Angular SSR alojado en Lambda. La base com
 
 El incremento de métricas del piloto está **desplegado y verificado en development con AWS y navegador autenticado mediante JWT real**. La aceptación del runtime `7dbffa9` usa fixtures sintéticos y actividad automatizada, sin acreditar productividad humana. Reutiliza el servicio y la tabla de Cotizaciones, sin un nuevo dominio, tabla ni índice global. Sus resultados están en [Verificación](../verificacion.md).
 
-La preparación de la convocatoria y el formulario público de interés está completa. La captura está **desplegada y verificada en development con AWS y navegador**, sobre el runtime `b8f1c96faf602e07c279849cdb5dc5361d0d318c` y su CI verde. Las solicitudes de aceptación son ficticias; la invitación sigue sin enviarse a terceros. La plantilla incorpora `InterestFunction` y su tabla propia `InterestTable`: siete Lambdas y cuatro tablas en total. Equipo e Incorporación siguen siendo entradas del mismo dominio de identidad y conservan `MembersTable`; Interés no puede leer ni modificar esa tabla, los catálogos o las propuestas.
+La preparación de la convocatoria y el formulario público de interés está completa. La captura se **desplegó y verificó en development con AWS y navegador** sobre el runtime `b8f1c96faf602e07c279849cdb5dc5361d0d318c` y su CI verde. Las solicitudes de aceptación son ficticias; la invitación sigue sin enviarse a terceros. Aquella entrega incorporó `InterestFunction` y su tabla propia `InterestTable`, con siete Lambdas y cuatro tablas. Equipo e Incorporación siguen siendo entradas del mismo dominio de identidad y conservan `MembersTable`; Interés no puede leer ni modificar esa tabla, los catálogos o las propuestas.
+
+La revisión privada incorpora `ApplicationsFunction`, una segunda entrada del dominio de Interés sobre su misma tabla: **ocho Lambdas y cuatro tablas**, sin un índice o migración nuevos. Sus rutas JWT requieren además un grupo de operador vigente consultado por IAM en el pool propio; el rol administrador comercial no concede acceso a solicitudes globales. [Diseño de gestión privada](006-gestion-solicitudes-piloto.md).
 
 ```mermaid
 flowchart LR
@@ -16,10 +18,13 @@ flowchart LR
   API --> Health[Lambda Salud]
   API --> Team[Lambda Equipo e identidad]
   API -->|POST público de interés| Interest[Lambda Interés del piloto]
+  API -->|JWT y permiso de operador actual| Applications[Lambda Gestión de solicitudes]
   Catalog --> CDB[(DynamoDB Catálogos)]
   Quote --> QDB[(DynamoDB Propuestas)]
   Team --> MDB[(DynamoDB Pertenencias)]
   Interest --> IDB[(DynamoDB Interés)]
+  Applications --> IDB
+  Applications -->|comprobar usuario y grupo / IAM| Cognito
   Catalog -->|autorizar pertenencia / IAM| Team
   Quote -->|autorizar pertenencia / IAM| Team
   Quote -->|contrato de lectura / Invoke IAM| Catalog
@@ -36,7 +41,8 @@ flowchart LR
 | Catálogos | Publicación de revisiones, listado y lectura | Tabla propia e invocación IAM de Equipo para autorizar. Publicación condicional; una revisión publicada no se edita. |
 | Cotizaciones | Motor determinista, simulación, emisión, snapshots, métricas del piloto y correcciones declaradas | Tabla propia, autorización mediante Equipo e invocación de lectura de Catálogos. Sin acceso directo a sus tablas. |
 | Salud | Respuesta técnica de disponibilidad de la función | Sin datos de negocio; no acredita salud de dependencias. |
-| Interés del piloto | Recepción pública de solicitudes y conservación del consentimiento de contacto | `InterestTable` propia, sin acceso a otros dominios ni lectura HTTP pública. Consulta del operador exclusivamente por IAM. |
+| Interés del piloto | Recepción pública de solicitudes y conservación del consentimiento de contacto | `InterestTable` propia, sin acceso a otros dominios ni lectura HTTP pública. La revisión privada pasa por Gestión de solicitudes o por una operación IAM explícita. |
+| Gestión de solicitudes | Bandeja privada, seguimiento y auditoría del mismo dominio de Interés | `InterestTable` compartida sólo dentro de su dominio y lectura del usuario/grupo actual en el pool propio. Sin cambios de cuentas, grupos o tablas comerciales desde la función. |
 
 Las funciones comparten utilidades de contrato, pero se ejecutan con roles separados. El monorepo no convierte los dominios en un único proceso. Catálogos y Cotizaciones no leen tablas de otros dominios: usan contratos de Lambda con permisos IAM. Equipo y el trigger de incorporación inicializan la tabla que pertenece a su propio dominio de identidad. En esta primera versión un stack SAM coordina los recursos; separar despliegues de dominio se puede realizar conservando los contratos.
 

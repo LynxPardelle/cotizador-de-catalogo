@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=24.15.0 <25" },
   "scripts": {
-    "test": "node --test \"services/**/*.test.mjs\" tools/aws-smoke.test.mjs tools/plan-development.test.mjs tools/quota-smoke.test.mjs tools/pilot-metrics-smoke.test.mjs tools/interest-smoke.test.mjs tools/pilot-interest-development.test.mjs",
+    "test": "node --test \"services/**/*.test.mjs\" tools/aws-smoke.test.mjs tools/plan-development.test.mjs tools/quota-smoke.test.mjs tools/pilot-metrics-smoke.test.mjs tools/interest-smoke.test.mjs tools/pilot-interest-development.test.mjs tools/pilot-reviewer-development.test.mjs tools/applications-smoke.test.mjs",
     "test:web": "npm --prefix web test -- --watch=false",
     "test:package": "node --test tools/package-web.test.mjs",
     "build": "npm --prefix web run build && node tools/package-web.mjs",
@@ -19,6 +19,8 @@
     "cleanup:metrics:development": "node --use-system-ca tools/pilot-metrics-smoke.mjs --cleanup",
     "smoke:interest:development": "node --use-system-ca tools/interest-smoke.mjs --verify",
     "cleanup:interest:development": "node --use-system-ca tools/interest-smoke.mjs --cleanup",
+    "smoke:applications:development": "node --use-system-ca tools/applications-smoke.mjs --verify",
+    "cleanup:applications:development": "node --use-system-ca tools/applications-smoke.mjs --cleanup",
     "pilot": "node tools/pilot.mjs"
   }
 }

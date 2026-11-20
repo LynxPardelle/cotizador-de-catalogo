@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "files": [
+    "applications/index.mjs",
+    "applications/domain.mjs",
+    "applications/auth.mjs",
+    "applications/dynamo.mjs",
+    "applications/contract.json",
     "catalog/index.mjs",
     "interest/index.mjs",
     "interest/domain.mjs",

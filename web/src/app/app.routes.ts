@@ -6,6 +6,7 @@ import { TeamStore } from './features/team/team.store';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', title: 'CotiTrama · Cotiza con reglas claras', loadComponent: () => import('./features/landing/landing').then((module) => module.Landing) },
   { path: 'piloto/interes', title: 'Participa en el piloto · CotiTrama', loadComponent: () => import('./features/pilot-interest/interest').then((module) => module.Interest) },
+  { path: 'piloto/solicitudes', title: 'Solicitudes del piloto · CotiTrama', loadComponent: () => import('./features/applications/applications').then((module) => module.Applications) },
   {
     path: '',
     loadComponent: () => import('./features/shell').then((module) => module.Shell),

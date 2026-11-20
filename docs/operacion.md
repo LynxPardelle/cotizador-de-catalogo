@@ -21,7 +21,7 @@ La demo se abre en http://127.0.0.1:4200, sólo en la máquina local, con datos 
 
 ## Preparar la nube
 
-El stack `infra/template.yaml` declara Web SSR, Catálogos, Cotizaciones, Equipo, Incorporación, Salud, HTTP API, Cognito, tres tablas propias por dominio, CloudFront OAC y aliases A/AAAA. Equipo y su tabla de pertenencias ya se desplegaron y verificaron en development, junto con la base comercial. La aceptación incluye condiciones/transacciones reales y operaciones con JWT en navegador. No hay recursos de demo en el stack. Requiere una zona pública existente de lynxpardelle.com y un certificado ACM en us-east-1 que cubra el subdominio de cada ambiente. Un wildcard `*.lynxpardelle.com` cubre los tres nombres previstos.
+El stack `infra/template.yaml` declara ocho Lambdas (Web SSR, Catálogos, Cotizaciones, Equipo, Incorporación, Salud, Interés y Gestión de solicitudes), HTTP API, Cognito, cuatro tablas propias por dominio, CloudFront OAC y aliases A/AAAA. Equipo e Incorporación comparten la tabla de identidad; captura y revisión comparten la tabla de Interés. La aceptación incluye condiciones/transacciones reales y operaciones con JWT en navegador, con evidencia por entrega. No hay recursos de demo en el stack. Requiere una zona pública existente de lynxpardelle.com y un certificado ACM en us-east-1 que cubra el subdominio de cada ambiente. Un wildcard `*.lynxpardelle.com` cubre los tres nombres previstos.
 
 Los identificadores de zona y certificado son parámetros del despliegue. `infra/environments.json` contiene los valores públicos comprobados mediante lecturas de AWS el 19 de noviembre de 2026: zona pública existente, certificado ISSUED para lynxpardelle.com y *.lynxpardelle.com, y nombres de stack/ambiente. Development ya publica su alias; no confundir la comprobación anterior a la creación del stack con el estado desplegado. Revalidar esos valores antes de ejecutar otro despliegue; no deben pegarse credenciales en archivos del repositorio. SAM CLI y cfn-lint son herramientas de operación, no dependencias del navegador.
 
@@ -40,7 +40,7 @@ El frontend empaquetado requiere `npm run build` antes de SAM. Su handler es `in
 
 La [convocatoria](piloto/convocatoria.md) contiene textos de correo y mensaje breve preparados para revisión. No se han enviado a contactos ni publicado en canales externos. La landing de development enlaza `/piloto/interes`; enviar ese formulario sólo registra interés. No confirma plaza, verifica correo, crea una cuenta ni activa un plan o cobro.
 
-El operador revisa solicitudes por IAM con `tools/pilot-interest-development.mjs`, exclusivamente en development y con el stack UPDATE_COMPLETE:
+El operador designado puede revisar y dar seguimiento desde el panel privado descrito más abajo. La consulta operativa por IAM sigue disponible con `tools/pilot-interest-development.mjs`, exclusivamente en development y con el stack UPDATE_COMPLETE:
 
 ```powershell
 node --use-system-ca tools/pilot-interest-development.mjs --list
@@ -61,6 +61,44 @@ npm run cleanup:interest:development
 ```
 
 El reporte ignorado `artifacts/interest-smoke.json` contiene sólo el namespace QA y evidencia de estas comprobaciones. La limpieza verifica tabla, referencia, correo sintético y hash; no enumera ni elimina solicitudes de organizaciones. No se agotan las 200 plazas diarias ni se preparan contadores artificiales: sus bordes se verifican localmente. Los controles y la retención están descritos en el [diseño de convocatoria](architecture/005-convocatoria-e-interes.md). Stripe continúa pendiente.
+
+## Gestionar las solicitudes del piloto
+
+La pantalla privada `/piloto/solicitudes` requiere el permiso específico de operador `cotitrama-pilot-reviewers`. Ser administrador de una organización no lo concede. Cada acceso al API comprueba en el pool propio que la cuenta siga habilitada, CONFIRMED, con correo verificado y con esa pertenencia vigente. El permiso permite revisar las solicitudes del piloto de CotiTrama, sin depender de la organización comercial seleccionada. La aceptación desplegada de este incremento se registra en [Verificación](verificacion.md); el [ADR 006](architecture/006-gestion-solicitudes-piloto.md) describe sus contratos y condiciones.
+
+La persona designada se registra y confirma su correo por el flujo normal. Con el stack de development desplegado y el grupo creado por SAM, un operador IAM asigna explícitamente el permiso a esa cuenta existente:
+
+```powershell
+node --use-system-ca tools/pilot-reviewer-development.mjs --show CORREO_VERIFICADO
+node --use-system-ca tools/pilot-reviewer-development.mjs --grant CORREO_VERIFICADO
+# Para retirar el permiso específico:
+node --use-system-ca tools/pilot-reviewer-development.mjs --revoke CORREO_VERIFICADO
+```
+
+Sustituir CORREO_VERIFICADO por el correo exacto de la cuenta designada. El helper valida cuenta, región, stack y pool de development; verifica el usuario y utiliza su username canónico. No crea cuentas o grupos ni confirma un correo por IAM. No usar grupos `org:*` para conceder el permiso de revisión. La revocación se comprueba en la siguiente petición protegida, incluso si existe una sesión con un token emitido anteriormente. Si una comprobación de permisos falla o excede el presupuesto, el panel no concede acceso por defecto.
+
+En el panel se filtra por estado y se abre una referencia para consultar contacto, solicitud e historial. La lista omite correo y notas. Cada petición evalúa como máximo cien registros en cuatro páginas y devuelve hasta veinticinco coincidencias; continuar mientras exista **Cargar más**, incluso si la página actual no tiene coincidencias. No hay un total global ni un orden cronológico global. Cambiar de filtro reinicia la paginación. El historial se consulta de veinte en veinte, desde la revisión más reciente.
+
+Los estados son Recibida, En revisión, Por aclarar, Contactada, Preseleccionada, No seleccionada y Retirada. El operador registra manualmente el seguimiento, una próxima fecha opcional y notas de hasta 500 caracteres. Una nota sola puede documentar una actuación sin cambiar el estado; incluir sólo información necesaria para coordinar el piloto. La fecha sirve para organización interna y no genera avisos automáticos. **Preseleccionada** no crea accesos, no envía mensajes y no activa un plan. Confirmar manualmente los acuerdos del protocolo antes de incorporar personas.
+
+Si otro operador guarda primero, 409 REVIEW_CONFLICT conserva la edición en pantalla: consultar la versión actual antes de preparar un nuevo guardado. Ante una respuesta incierta, reintentar el mismo cambio conserva su referencia y devuelve la primera respuesta confirmada; no usar una referencia nueva hasta saber si el guardado anterior quedó registrado. Un cambio posterior debe expresar la versión actual. El historial conserva estado y fecha anteriores/nuevos, nota, momento e identificador derivado del operador.
+
+El seguimiento mantiene inalterados la solicitud recibida, su autorización original de contacto, su hash y el recibo público. Las solicitudes anteriores aparecen como Recibidas con versión cero. Solicitud, historial y replays conservan el mismo plazo original de noventa días: revisar o añadir una nota no lo amplía. Al caducar no se muestran mediante el panel/API, aunque la eliminación física por TTL sea posterior. Retirada registra el estado del proceso y no ejecuta una baja o un borrado automático.
+
+La aceptación sintética de este incremento utiliza exclusivamente cuentas y solicitudes QA en development:
+
+```powershell
+npm run smoke:applications:development
+# Abrir la solicitud ficticia del reporte con una sesión de operador autorizada.
+# Para inducir un conflicto después de cargar la versión en pantalla:
+node --use-system-ca tools/applications-smoke.mjs --advance REFERENCIA_QA_UUID
+# Guardar desde el navegador needs_info, fecha vacía y la nota literal:
+# QA navegador CotiTrama: seguimiento manual.
+node --use-system-ca tools/applications-smoke.mjs --verify-browser
+npm run cleanup:applications:development
+```
+
+Los helpers y las pruebas de navegador deben acreditar acceso permitido, rechazo del administrador sin permiso, seguimiento e historial, replay, conflicto de versión y revocación con token previo. La aceptación técnica invoca funciones reales por IAM con envelopes sintéticos; la sesión de navegador verifica por separado JWT y HTTP API. El helper crea sólo tres actores QA con correo suprimido y una solicitud ficticia, y su limpieza conserva las solicitudes y cuentas ajenas a ese namespace, incluida la cuenta del operador real. No utilizar cuentas de participantes para preparar o limpiar fixtures. La revisión de organizaciones reales y la comunicación de decisiones siguen siendo manuales; Stripe permanece pendiente.
 
 ## Preparar el piloto con personas
 

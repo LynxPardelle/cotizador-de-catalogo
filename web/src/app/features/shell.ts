@@ -1,4 +1,4 @@
-import { afterNextRender, Component, effect, inject, signal, untracked } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Auth } from '../core/auth';
@@ -6,6 +6,7 @@ import { RuntimeConfig } from '../core/runtime-config';
 import { WorkspaceContext } from '../core/workspace-context';
 import { roleLabel } from '../data/team-api';
 import { UsageContext } from '../core/usage-context';
+import { ApplicationsAccess } from '../core/applications-access';
 
 @Component({
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
@@ -19,6 +20,7 @@ import { UsageContext } from '../core/usage-context';
         <a routerLink="/equipo" routerLinkActive="active">Equipo</a>
         <a routerLink="/consumo" routerLinkActive="active">Consumo</a>
         @if(auth.available&&auth.role==='admin'){<a routerLink="/piloto" routerLinkActive="active">Piloto</a>}
+        @if(signedIn()&&applicationsAccess.allowed()){<a routerLink="/piloto/solicitudes" routerLinkActive="active">Solicitudes</a>}
       </nav>
       <div class="session-actions">
         @if (config.settings().demo) { <span class="demo-label">Demostración</span> }
@@ -39,9 +41,12 @@ import { UsageContext } from '../core/usage-context';
 export class Shell {
   protected readonly auth = inject(Auth); protected readonly config = inject(RuntimeConfig); protected readonly router = inject(Router); protected readonly workspace = inject(WorkspaceContext); protected readonly roleLabel = roleLabel;
   private readonly document = inject(DOCUMENT); protected readonly usage = inject(UsageContext); private readonly ready = signal(false);
+  protected readonly applicationsAccess=inject(ApplicationsAccess);private readonly clock=signal(Date.now());protected readonly signedIn=computed(()=>{this.clock();return this.auth.available;});
   constructor() {
-    afterNextRender(() => this.ready.set(true));
+    const destroy=inject(DestroyRef);
+    afterNextRender(() => { if(this.config.browser){this.ready.set(true);const timer=setInterval(()=>this.clock.set(Date.now()),1000);destroy.onDestroy(()=>clearInterval(timer));} });
     effect(() => { const ready = this.ready(); const organizationId = this.workspace.activeOrganizationId(); this.workspace.sessionVersion(); const available = this.auth.available; if (ready) untracked(() => { if (available && organizationId) void this.usage.load(); else this.usage.reset(); }); });
+    effect(()=>{const ready=this.ready();const signedIn=this.signedIn();this.workspace.sessionVersion();untracked(()=>{if(ready&&signedIn)void this.applicationsAccess.check();else this.applicationsAccess.reset();});});
   }
   protected switchWorkspace(organizationId: string) { if (this.workspace.select(organizationId)) this.document.location.assign('/cotizar'); }
 }

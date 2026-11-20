@@ -440,6 +440,92 @@ Resources:
               ThrottlingBurstLimit: 5
               ThrottlingRateLimit: 2
 
+  PilotReviewersGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: cotitrama-pilot-reviewers
+      UserPoolId: !Ref UserPool
+      Description: Operadores autorizados por IAM para revisar solicitudes del piloto; el registro no concede este permiso.
+
+  ApplicationsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+  ApplicationsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ReviewOwnInterestAndCurrentOperator
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ApplicationsLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:Scan, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem]
+                Resource: !GetAtt InterestTable.Arn
+              - Effect: Allow
+                Action: [cognito-idp:AdminGetUser, cognito-idp:AdminListGroupsForUser]
+                Resource: !GetAtt UserPool.Arn
+
+  ApplicationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../services/
+      Handler: applications/index.handler
+      Role: !GetAtt ApplicationsRole.Arn
+      Environment:
+        Variables:
+          INTEREST_TABLE: !Ref InterestTable
+          APPLICATIONS_USER_POOL_ID: !Ref UserPool
+      LoggingConfig:
+        LogGroup: !Ref ApplicationsLogGroup
+      Events:
+        AccessContext:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/context
+            Method: GET
+            TimeoutInMillis: 10000
+        ListApplications:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications
+            Method: GET
+            TimeoutInMillis: 10000
+        ApplicationDetail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/{reference}
+            Method: GET
+            TimeoutInMillis: 10000
+        ApplicationHistory:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/{reference}/history
+            Method: GET
+            TimeoutInMillis: 10000
+        ReviewApplication:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/{reference}
+            Method: PATCH
+            TimeoutInMillis: 10000
+
   HealthLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -885,6 +971,22 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
 
+  ApplicationsErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CotiTrama private pilot application review failures require investigation.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApplicationsFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
 Outputs:
   PublicUrl:
     Value: !Sub
@@ -912,3 +1014,5 @@ Outputs:
     Value: !Ref InterestFunction
   InterestTableName:
     Value: !Ref InterestTable
+  ApplicationsFunctionName:
+    Value: !Ref ApplicationsFunction

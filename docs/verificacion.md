@@ -2,7 +2,15 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
-## Última entrega de runtime: convocatoria y formulario de interés
+## Gestión privada de solicitudes: preparación de la entrega
+
+Implementación de `/piloto/solicitudes` y ApplicationsFunction en development, con grupo de operador dedicado, revisión manual e historial transaccional sobre InterestTable. La cuenta designada se registró por sí misma y se comprobó habilitada, confirmada y con correo verificado; el permiso se asigna mediante la herramienta operativa después de desplegar el grupo. No se incorporan correos o identificadores personales al repositorio.
+
+Validación local: **250 pruebas correctas** (158 servicios/herramientas, 90 Angular y dos de empaquetado), build SSR completo, invocación del paquete Lambda incluyendo `/piloto/solicitudes` y lint CloudFormation/SAM correctos. Una revisión independiente comprobó permisos, conservación del original/TTL, paginación y límites de limpieza sintética. Se reprodujeron y corrigieron cambios de filtro durante cargas, 404 definitivo, denegaciones tardías de lecturas paralelas y expiración de sesión; la interfaz conserva la edición en conflictos y congela el payload en reintentos ambiguos.
+
+La aceptación desplegada de este incremento está pendiente de registrar. Las invocaciones de negocio por IAM con envelopes sintéticos y la comprobación de JWT real en navegador se documentarán por separado; no equivalen a observar organizaciones participantes. Stripe permanece pendiente. La entrega anterior se conserva abajo como histórico.
+
+## Entrega anterior: convocatoria y formulario de interés
 
 Formulario público: **https://cotitrama-dev.lynxpardelle.com/piloto/interes**. Runtime final **b8f1c96faf602e07c279849cdb5dc5361d0d318c**, con SourceCommit coincidente y stack UPDATE_COMPLETE. Su [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44643192043) terminó correctamente. La recepción se aceptó inicialmente con `181626a3e88c04c74478ae79027028f654d6037b`, cuya [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44642205007) también pasó; el runtime final añade únicamente el ajuste visual descrito abajo. Los commits de evidencia posteriores no cambian el runtime.
 
