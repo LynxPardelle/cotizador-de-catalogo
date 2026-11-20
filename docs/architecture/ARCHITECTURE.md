@@ -6,7 +6,7 @@ El incremento de métricas del piloto está **desplegado y verificado en develop
 
 La preparación de la convocatoria y el formulario público de interés está completa. La captura se **desplegó y verificó en development con AWS y navegador** sobre el runtime `b8f1c96faf602e07c279849cdb5dc5361d0d318c` y su CI verde. Las solicitudes de aceptación son ficticias; la invitación sigue sin enviarse a terceros. Aquella entrega incorporó `InterestFunction` y su tabla propia `InterestTable`, con siete Lambdas y cuatro tablas. Equipo e Incorporación siguen siendo entradas del mismo dominio de identidad y conservan `MembersTable`; Interés no puede leer ni modificar esa tabla, los catálogos o las propuestas.
 
-La revisión privada incorpora `ApplicationsFunction`, una segunda entrada del dominio de Interés sobre su misma tabla: **ocho Lambdas y cuatro tablas**, sin un índice o migración nuevos. Sus rutas JWT requieren además un grupo de operador vigente consultado por IAM en el pool propio; el rol administrador comercial no concede acceso a solicitudes globales. [Diseño de gestión privada](006-gestion-solicitudes-piloto.md).
+La revisión privada está desplegada y verificada en development con AWS y navegador JWT real. Incorpora `ApplicationsFunction`, una segunda entrada del dominio de Interés sobre su misma tabla: **ocho Lambdas y cuatro tablas**, sin un índice o migración nuevos. Sus rutas JWT requieren además un grupo de operador vigente consultado por IAM en el pool propio; el rol administrador comercial no concede acceso a solicitudes globales. [Diseño de gestión privada](006-gestion-solicitudes-piloto.md).
 
 ```mermaid
 flowchart LR

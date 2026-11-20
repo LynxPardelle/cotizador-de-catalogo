@@ -2,13 +2,45 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
-## Gestión privada de solicitudes: preparación de la entrega
+## Última entrega de runtime: gestión privada de solicitudes
 
-Implementación de `/piloto/solicitudes` y ApplicationsFunction en development, con grupo de operador dedicado, revisión manual e historial transaccional sobre InterestTable. La cuenta designada se registró por sí misma y se comprobó habilitada, confirmada y con correo verificado; el permiso se asigna mediante la herramienta operativa después de desplegar el grupo. No se incorporan correos o identificadores personales al repositorio.
+Panel privado: **https://cotitrama-dev.lynxpardelle.com/piloto/solicitudes**. Runtime **2bd574380a1f2523d5ed1835df82e67b98d4e63e**, con SourceCommit coincidente y stack UPDATE_COMPLETE. Su [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44647502115) terminó correctamente. Los commits posteriores de evidencia no cambian el runtime.
+
+ApplicationsFunction ofrece revisión manual e historial transaccional sobre InterestTable. La cuenta designada se registró por sí misma; se comprobó habilitada, CONFIRMED y con correo verificado antes de asignar el grupo específico de operador mediante la herramienta operativa. Tras la aceptación y limpieza se verificaron otra vez ese permiso, su perfil propio y su pertenencia de administrador a su organización. No se incorporan correos o identificadores personales al repositorio.
 
 Validación local: **250 pruebas correctas** (158 servicios/herramientas, 90 Angular y dos de empaquetado), build SSR completo, invocación del paquete Lambda incluyendo `/piloto/solicitudes` y lint CloudFormation/SAM correctos. Una revisión independiente comprobó permisos, conservación del original/TTL, paginación y límites de limpieza sintética. Se reprodujeron y corrigieron cambios de filtro durante cargas, 404 definitivo, denegaciones tardías de lecturas paralelas y expiración de sesión; la interfaz conserva la edición en conflictos y congela el payload en reintentos ambiguos.
 
-La aceptación desplegada de este incremento está pendiente de registrar. Las invocaciones de negocio por IAM con envelopes sintéticos y la comprobación de JWT real en navegador se documentarán por separado; no equivalen a observar organizaciones participantes. Stripe permanece pendiente. La entrega anterior se conserva abajo como histórico.
+El build inicial mide 371.71 kB, con transferencia estimada de 100.28 kB. SAM compiló las ocho funciones. El changeset añadió diez recursos propios, sin eliminaciones ni reemplazos de tablas/pool. Los cambios de las cuatro tablas fueron únicamente etiquetas. La plantilla conserva cuatro tablas y ahora siete alarmas; todas terminaron en OK. El TTL de InterestTable continúa ENABLED sobre expiresAt.
+
+### Aceptación AWS de solicitudes
+
+`tools/applications-smoke.mjs --verify` completó cinco bloques con una solicitud ficticia y tres cuentas sintéticas creadas con correo suprimido:
+
+1. Recepción por el endpoint público, journaling previo al envío y replay idéntico con un solo recibo. Persistencia del formulario original, autorización y deadline de noventa días comprobados por IAM.
+2. Las cinco rutas privadas rechazan al anónimo con 401. Dos administradores de organizaciones propias reciben 403 en las cinco operaciones, aunque su envelope incluya grupos de operador y una organización falsificados.
+3. Asignar y retirar el grupo dedicado modifica la autorización del siguiente acceso. La revocación se comprobó con el mismo envelope IAM conservando claims anteriores; esta prueba de negocio no se presenta como una revocación observada en navegador con JWT real.
+4. La bandeja paginada alcanza el registro histórico sin review como Recibida/v0, con detalle original e historial vacío. El listado omite correo y notas y conserva su presupuesto de lectura y continuación explícita.
+5. PATCH v0 → v1, replay idéntico sin otro evento, payload cambiado con el mismo identificador → 409 y dos revisiones concurrentes de v1 → un 200 y un 409 REVIEW_CONFLICT. Quedan exactamente v2/v1 en el historial. Otra edición obsoleta se rechaza. Formulario, consentimiento, hash, estado público, deadline y recibo siguen intactos.
+
+Estos bloques invocan Lambdas desplegadas por IAM con envelopes HTTP API v2 sintéticos; las denegaciones anónimas y la recepción usan la URL pública. No son una prueba de carga, un agotamiento de las 200 recepciones diarias ni una observación del piloto humano.
+
+### Navegador con JWT real y persistencia
+
+La sesión existente de la cuenta real designada se renovó mediante el flujo PKCE y el SSO normal de Cognito, sin leer ni introducir su contraseña o código. El panel abrió con acceso de operador a través de CloudFront/HTTP API y JWT real. Todas las escrituras de aceptación se limitaron a la solicitud ficticia:
+
+- Abrir detalle mostró el formulario original, el contacto ficticio, la autorización, el vencimiento y los eventos v2/v1.
+- Con un borrador de estado Por aclarar, fecha 2026-11-25 y nota interna, el helper avanzó la revisión a v3. Guardar desde la pantalla produjo el conflicto esperado y conservó los tres campos. La recarga explícita mostró v3 antes de permitir una nueva edición.
+- Guardar creó v4 con estado, fecha y nota. Tras recargar la página, la lista conservó la fecha y el detalle reabierto conservó v4 y su historial.
+- Retirar la fecha produjo v5 y dejó el movimiento 2026-11-25 → Sin fecha en el historial. `--verify-browser` comprobó la persistencia, la nota y la conservación del original y de los deadlines en DynamoDB.
+- El filtro Recibida excluyó la solicitud revisada; Por aclarar la incluyó. No se observaron errores en el registro de consola durante este recorrido.
+
+### Limpieza y estado final
+
+`--cleanup` eliminó sólo RECORD/REVIEW#/REPLAY# de la referencia QA verificada, conservó el contador DAILY y retiró las tres cuentas sintéticas y sus grupos propios vacíos. La evidencia sintética previa de identidad en DynamoDB se conserva conforme al helper de cuotas; no se borraron perfiles comerciales o solicitudes ajenos. Los archivos privados de credenciales y manifiestos temporales se retiraron. La cuenta real conservó el grupo de operador, su perfil y su rol administrador propio.
+
+El navegador quedó en la bandeja autorizada con Todos los estados y cero solicitudes, sin detalle de prueba seleccionado. La sesión real se conservó. Los estados no enviaron correos ni crearon participantes, accesos, suscripciones o cobros. Stripe permanece pendiente; reclutamiento y TASK-006 siguen pendientes.
+
+Evidencia local ignorada: `artifacts/applications-preflight.json`, `artifacts/applications-changeset.json`, `artifacts/applications-smoke.json`, `artifacts/applications-browser.json`, `artifacts/applications-real-operator-check.json` y capturas `cotitrama-solicitudes-conflicto.jpg`, `cotitrama-solicitudes-seguimiento.jpg`, `cotitrama-solicitudes-historial.jpg` y `cotitrama-solicitudes-listo.jpg`. El informe anterior de cuotas se conservó como `artifacts/quota-smoke-before-applications-20261119.json`. La entrega anterior se mantiene abajo como histórico.
 
 ## Entrega anterior: convocatoria y formulario de interés
 

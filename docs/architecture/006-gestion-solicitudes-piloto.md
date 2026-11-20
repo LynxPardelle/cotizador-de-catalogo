@@ -1,6 +1,6 @@
 # Gestión privada de solicitudes del piloto
 
-Decisión del 19 de noviembre de 2026. Amplía la [recepción de interés](005-convocatoria-e-interes.md) con una pantalla privada de seguimiento para operadores designados. La implementación se prepara en development; la aceptación observada en AWS y navegador se registra por separado en [Verificación](../verificacion.md). Stripe continúa pendiente.
+Decisión del 19 de noviembre de 2026. Amplía la [recepción de interés](005-convocatoria-e-interes.md) con una pantalla privada de seguimiento para operadores designados. Implementada, desplegada y verificada en development con AWS y navegador autenticado mediante JWT real; la aceptación y sus límites se registran en [Verificación](../verificacion.md). Stripe continúa pendiente.
 
 ## Acceso específico de operador
 
