@@ -20,6 +20,8 @@ export function createMemoryTeamRepository({plans={}}={}) {
       for(const member of initial) memberships.set(key(member.organizationId,sub),copy({...member,subject:sub,email}));
       profiles.set(sub,{subject:sub,email,defaultOrganizationId:initial[0]?.organizationId ?? null});return true;
     },
+    async pilotMemberships(sub){const values=[...memberships.values()].filter(member=>member.subject===sub);if(values.length>32)throw new HttpError(503,'PILOT_TEAM_LIMIT','La consulta supera el presupuesto de verificación del piloto.');return copy(values);},
+    async pilotMembers(org){const values=allMembers(org);if(values.length>25)throw new HttpError(503,'PILOT_TEAM_LIMIT','El equipo supera el presupuesto de verificación del piloto.');return copy(values);},
     async memberships(sub){return copy([...memberships.values()].filter(member=>member.subject===sub).sort((a,b)=>a.organizationId.localeCompare(b.organizationId)));},
     async member(org,sub){return copy(memberships.get(key(org,sub)));},
     async members(org){return copy(allMembers(org).sort((a,b)=>a.subject.localeCompare(b.subject)));},

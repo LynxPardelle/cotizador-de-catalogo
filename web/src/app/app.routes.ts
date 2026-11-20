@@ -7,6 +7,10 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', title: 'CotiTrama · Cotiza con reglas claras', loadComponent: () => import('./features/landing/landing').then((module) => module.Landing) },
   { path: 'piloto/interes', title: 'Participa en el piloto · CotiTrama', loadComponent: () => import('./features/pilot-interest/interest').then((module) => module.Interest) },
   { path: 'piloto/solicitudes', title: 'Solicitudes del piloto · CotiTrama', loadComponent: () => import('./features/applications/applications').then((module) => module.Applications) },
+  { path: 'piloto/preparacion/:reference', data:{mode:'operator'}, title: 'Preparación del piloto · CotiTrama', loadComponent: () => import('./features/preparation/preparation').then((module) => module.Preparation) },
+  { path: 'piloto/incorporacion/:reference', data:{mode:'participant'}, title: 'Tu incorporación al piloto · CotiTrama', loadComponent: () => import('./features/preparation/preparation').then((module) => module.Preparation) },
+  { path: 'piloto/preparacion/:reference', title: 'Preparar el piloto · CotiTrama', data: {mode:'operator'}, loadComponent: () => import('./features/preparation/preparation').then((module) => module.Preparation) },
+  { path: 'piloto/incorporacion/:reference', title: 'Tu incorporación al piloto · CotiTrama', data: {mode:'participant'}, loadComponent: () => import('./features/preparation/preparation').then((module) => module.Preparation) },
   {
     path: '',
     loadComponent: () => import('./features/shell').then((module) => module.Shell),

@@ -35,7 +35,7 @@ export function noQuery(event){query(event,[]);}
 function validKey(key){
  if(!key||typeof key!=='object'||Array.isArray(key)||Object.keys(key).length!==2||!Object.hasOwn(key,'PK')||!Object.hasOwn(key,'SK'))return false;
  if(/^DAILY#\d{4}-\d{2}-\d{2}$/.test(key.PK))return key.SK==='COUNTER';
- return typeof key.PK==='string'&&key.PK.startsWith('INTEREST#')&&validUuid(key.PK.slice(9))&&(key.SK==='RECORD'||/^REVIEW#\d{12}$/.test(key.SK)||typeof key.SK==='string'&&key.SK.startsWith('REPLAY#')&&validUuid(key.SK.slice(7)));
+ return typeof key.PK==='string'&&key.PK.startsWith('INTEREST#')&&validUuid(key.PK.slice(9))&&(key.SK==='RECORD'||/^(?:REVIEW|PREP_HISTORY)#\d{12}$/.test(key.SK)||typeof key.SK==='string'&&validUuid(/^(?:REPLAY|PREP_REPLAY)#(.+)$/.exec(key.SK)?.[1]));
 }
 export function encodeCursor(key,binding){if(!key)return null;if(!validKey(key))throw unavailable();return Buffer.from(JSON.stringify({v:1,...binding,key})).toString('base64url');}
 export function decodeCursor(value,binding){
@@ -43,7 +43,7 @@ export function decodeCursor(value,binding){
  try{
   if(typeof value!=='string'||!/^[A-Za-z0-9_-]{1,2048}$/.test(value)||Buffer.from(value,'base64url').toString('base64url')!==value)throw new Error();
   const parsed=JSON.parse(Buffer.from(value,'base64url').toString('utf8'));const expected=['v',...Object.keys(binding),'key'].sort();if(JSON.stringify(Object.keys(parsed).sort())!==JSON.stringify(expected)||parsed.v!==1||!validKey(parsed.key)||Object.entries(binding).some(([key,value])=>parsed[key]!==value))throw new Error();
-  if(binding.kind==='history'&&(parsed.key.PK!==`INTEREST#${binding.reference}`||!/^REVIEW#\d{12}$/.test(parsed.key.SK)))throw new Error();return parsed.key;
+  if(['history','preparation-history'].includes(binding.kind)&&(parsed.key.PK!==`INTEREST#${binding.reference}`||!(binding.kind==='history'?/^REVIEW#\d{12}$/:/^PREP_HISTORY#\d{12}$/).test(parsed.key.SK)))throw new Error();return parsed.key;
  }catch{throw badRequest('La continuación de la consulta no es válida.');}
 }
 export function historyEvent(previous,body,actorKey,createdAt){return {mutationId:body.mutationId,version:previous.version+1,previousStatus:previous.status,status:body.status,previousNextActionDate:previous.nextActionDate,nextActionDate:body.nextActionDate,note:body.note,actorKey,createdAt};}

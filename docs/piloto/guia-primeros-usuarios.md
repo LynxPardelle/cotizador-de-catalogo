@@ -13,6 +13,14 @@ La persona que coordina el piloto te entregará tu rol, el espacio que debes usa
 - Reserva un equipo con navegador y conexión estable. No necesitas instalar herramientas ni compartir tu pantalla fuera de lo acordado.
 - Puedes pausar o terminar tu participación. Explica a la persona facilitadora si fue una interrupción, un problema del producto u otro motivo; esa diferencia ayuda a interpretar los resultados.
 
+## Si eres el contacto de una organización preseleccionada
+
+La operación del piloto te compartirá manualmente un enlace de incorporación. Ábrelo con el mismo correo de contacto que usaste en la solicitud. Puedes iniciar sesión o crear y confirmar tu propia cuenta desde esa pantalla. El enlace por sí solo no concede acceso.
+
+Selecciona expresamente el espacio de tu organización donde tengas administración y confirma participación y consulta de los metadatos necesarios para preparar el piloto. La pantalla te permitirá abrir Equipo y Catálogos en ese espacio. Invita al segundo participante con rol Vendedor mediante el flujo de Equipo y comparte su enlace de invitación, dirigido a su propio correo; el enlace de incorporación de contacto corresponde a tu cuenta.
+
+Publica el catálogo revisado y autorizado con el flujo JSON actual. Vuelve a la incorporación, indica su identificador y revisión, y confirma la autorización para usarlo en el piloto. La preparación comprobará accesos vigentes y ese catálogo activo y vigente. La operación del piloto confirmará contigo referencias, sesiones, canal de ayuda, tratamiento de evidencias y fecha prevista. **Lista para coordinar el inicio** no inicia automáticamente los catorce días: acordaréis el comienzo cuando todo esté preparado.
+
 ## 1. Crea tu cuenta y confirma el correo
 
 1. En la página de inicio, pulsa **Crear cuenta**.

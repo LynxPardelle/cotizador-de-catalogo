@@ -102,6 +102,29 @@ Los helpers y las pruebas de navegador deben acreditar acceso permitido, rechazo
 
 ## Preparar el piloto con personas
 
+### Incorporar una organización preseleccionada
+
+1. El operador marca la solicitud como Preseleccionada y abre **Preparar incorporación**. La pantalla `/piloto/preparacion/<referencia>` muestra pendientes e historial y permite copiar el enlace de incorporación para compartirlo manualmente con el contacto. No envía correo.
+2. El contacto abre `/piloto/incorporacion/<referencia>`, inicia sesión o registra y confirma su propia cuenta con el mismo correo de la solicitud. Selecciona un espacio que actualmente administre y acepta participación y consulta de metadatos para preparar el piloto. Esa vinculación queda fija para la solicitud; no se usa un cambio de correo para transferirla.
+3. Desde **Gestionar equipo**, el administrador crea la invitación al vendedor y la comparte manualmente. El vendedor registra/confirma su propia cuenta y acepta el enlace con el correo destinatario. Un enlace creado o dos administradores no acreditan el vendedor requerido por el protocolo.
+4. Desde **Preparar catálogo**, el administrador publica el JSON autorizado y vigente. Vuelve a la incorporación, indica identificador y revisión publicada y confirma la autorización de uso. Se mantiene esa revisión aunque haya una publicación posterior; archivar el catálogo o caducar lo deja pendiente en la siguiente comprobación.
+5. El operador confirma los acuerdos con las personas: roles, referencias independientes, sesiones, canal privado de ayuda y tratamiento de evidencias. Registra una fecha prevista actual o futura en calendario UTC y guarda. **Actualizar comprobaciones** vuelve a consultar accesos y catálogo; el sello de última comprobación indica la vigencia de la pantalla.
+6. **Lista para coordinar el inicio** exige administrador y vendedor distintos con cuentas vigentes, catálogo autorizado activo/vigente, los cinco acuerdos y fecha. Confirmar el comienzo con las personas conforme al protocolo: el estado no inicia el período, inscribe automáticamente participantes ni activa cobros.
+
+Los cambios se guardan con versión e identificador idempotente. Un conflicto exige recarga explícita y conserva la edición; una respuesta incierta conserva exactamente la misma intención para reintentar. Retirar o cambiar la preselección pausa las rutas de preparación sin borrar datos comerciales. Caducar la solicitud la oculta; el seguimiento mantiene el deadline original de noventa días. Los consentimientos se conservan por versión, fecha e identidad interna, fuera de los DTO públicos.
+
+Para aceptación ficticia de desarrollo:
+
+```powershell
+npm run smoke:preparation:development
+# Revisar operatorUrl/contactUrl y la fecha esperada en artifacts/preparation-smoke.json.
+# Comprobar las pantallas con sesiones autorizadas y datos QA exclusivamente.
+node --use-system-ca tools/preparation-smoke.mjs --verify-browser
+npm run cleanup:preparation:development
+```
+
+El helper exige un run de cuotas nuevo preparado sólo con --prepare, conserva las credenciales únicamente en el artefacto privado ignorado y limita escrituras a tres actores, una solicitud y su espacio/catálogo sintéticos. No sustituye la recepción y confirmación real de correo ni mide productividad humana. Las pruebas de negocio por IAM y JWT de navegador se documentan por separado. No cambiar configuraciones de Cognito para simplificar QA. La limpieza conserva DAILY y la evidencia comercial sintética; no se usa con participantes. [Contrato y límites](architecture/007-incorporacion-del-piloto.md).
+
 El [protocolo de primeros usuarios](piloto/protocolo.md) define convocatoria, datos autorizados, calendario, casos y criterios de éxito. Usar su [guía de incorporación](piloto/guia-primeros-usuarios.md) y copiar las [plantillas vacías](piloto/plantillas/README.md) a la ubicación privada acordada fuera de Git. TASK-013 deja preparada esa documentación; TASK-006 sigue pendiente hasta observar personas y registrar resultados reales.
 
 El facilitador confirma dos espacios designados, dos miembros por espacio y una copia mínima de catálogo autorizada. No ejecutar scripts de preparación/cleanup sintético con cuentas de participantes: cada persona se registra y confirma su propio correo, y las invitaciones se comparten manualmente. Los resultados de la cohorte se separan de la práctica mediante el registro privado; el panel no ofrece filtro por cohorte ni una exportación de esos datos. Mantener las tareas medidas en v1 y pasar a los controles de v2 después. No se activa Stripe ni un cobro.

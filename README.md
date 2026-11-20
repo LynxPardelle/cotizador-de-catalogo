@@ -12,6 +12,7 @@ Cotizaciones que conservan sus reglas. Publica catálogos versionados, configura
 - [Guía para primeros usuarios](docs/piloto/guia-primeros-usuarios.md)
 - [Convocatoria e invitación del piloto](docs/piloto/convocatoria.md)
 - [Gestión privada de solicitudes](docs/architecture/006-gestion-solicitudes-piloto.md)
+- [Incorporación y preparación del piloto](docs/architecture/007-incorporacion-del-piloto.md)
 - [Operación y despliegue](docs/operacion.md)
 - [Promoción development → testing → main](docs/promocion.md)
 
@@ -93,3 +94,11 @@ La preparación de la convocatoria y la captura está completa. Compartir la inv
 `/piloto/solicitudes` está **desplegado y verificado en development con AWS y navegador autenticado mediante JWT real**. Incorpora una bandeja de revisión con filtros, detalle privado, estado, próxima acción e historial de notas. El acceso requiere el grupo de operador `cotitrama-pilot-reviewers`, asignado por IAM a una cuenta confirmada con correo verificado; administrar una organización no concede este permiso. El servidor consulta el permiso actual en cada operación, sin confiar en grupos antiguos del JWT. La [guía operativa](docs/operacion.md) explica la asignación y retirada.
 
 Las actualizaciones comprueban la versión y conservan un historial transaccional: dos revisores no sobrescriben cambios en silencio y un reintento idéntico no duplica eventos. La solicitud original, el consentimiento, el recibo público y la expiración se conservan. La bandeja carga páginas acotadas con continuación explícita, sin presentar el número cargado como total global. Los estados son seguimiento manual y no envían correo ni crean accesos, plazas o suscripciones. La verificación de esta entrega se registra en [Verificación](docs/verificacion.md); Stripe sigue pendiente.
+
+## Incorporar organizaciones preseleccionadas
+
+Una solicitud Preseleccionada abre `/piloto/preparacion/<referencia>` para el operador. Su contacto recibe manualmente el enlace `/piloto/incorporacion/<referencia>`, inicia sesión con el correo confirmado de la solicitud y autoriza expresamente un espacio donde conserve administración. La referencia por sí sola no concede acceso. Cada persona se registra y confirma su propia cuenta; el segundo participante acepta la invitación existente de Equipo.
+
+El contacto publica un catálogo autorizado por el flujo actual y registra su identificador y revisión. La preparación comprueba el administrador y un vendedor distinto con cuentas actuales habilitadas y verificadas, y el catálogo específico activo y vigente. El operador confirma participantes, referencias, sesiones, canal de ayuda, tratamiento de evidencias y fecha prevista. Los pendientes y la última comprobación se muestran por separado; disponibilidad y roles se consultan nuevamente al actualizar la pantalla.
+
+Lista para coordinar el inicio exige todos los requisitos. No inicia los catorce días ni una suscripción. El operador recibe indicadores y metadatos consentidos, sin acceso general a miembros, precios o reglas. Esta ampliación reutiliza ApplicationsFunction/InterestTable y contratos IAM de Equipo y Catálogos; conserva ocho Lambdas y cuatro tablas. [Diseño, retención y límites](docs/architecture/007-incorporacion-del-piloto.md). Stripe y el piloto humano continúan pendientes; la aceptación de cada entrega se registra en [Verificación](docs/verificacion.md).

@@ -1,0 +1,10 @@
+{
+  "consentVersion": "2026-11-19",
+  "agreements": [
+    {"id":"participants","label":"Participantes y roles acordados"},
+    {"id":"references","label":"Casos y resultados de referencia revisados"},
+    {"id":"sessions","label":"Sesiones y horarios acordados"},
+    {"id":"support","label":"Canal privado de ayuda acordado"},
+    {"id":"evidence","label":"Tratamiento de evidencias acordado"}
+  ]
+}

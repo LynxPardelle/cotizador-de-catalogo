@@ -46,7 +46,19 @@ export function createDynamoTeamRepository({client=DynamoDBDocumentClient.from(n
       throw new HttpError(503,'USAGE_UNAVAILABLE','No pudimos comprobar el consumo de miembros.');
     }
   }
+  async function pilotQuery(PK,prefix,limit){
+    const results=[];let ExclusiveStartKey;
+    for(let page=0;page<4;page++){
+      const result=await client.send(new QueryCommand({TableName:table,KeyConditionExpression:'PK = :pk AND begins_with(SK, :prefix)',ExpressionAttributeValues:{':pk':PK,':prefix':prefix},ConsistentRead:true,Limit:limit+1-results.length,ExclusiveStartKey}));
+      results.push(...(result.Items??[]).map(item=>item.member));
+      if(results.length>limit)throw new HttpError(503,'PILOT_TEAM_LIMIT','El equipo supera el presupuesto de verificación del piloto.');
+      ExclusiveStartKey=result.LastEvaluatedKey;if(!ExclusiveStartKey)return results;
+    }
+    throw new HttpError(503,'PILOT_TEAM_LIMIT','No pudimos completar la verificación del equipo dentro de su presupuesto.');
+  }
   const repository={
+    async pilotMemberships(subject){return pilotQuery(`USER#${subject}`,'ORG#',32);},
+    async pilotMembers(org){return pilotQuery(`ORG#${org}`,'MEMBER#',25);},
     async plan(org){return planFor((await get(metaKey(org)))?.planId);},
     async memberCount(org){return (await ensureMemberCounter(org)).memberCount;},
     async profile(subject){return (await get(profileKey(subject)))?.profile;},

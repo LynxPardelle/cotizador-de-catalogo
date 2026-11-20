@@ -1,6 +1,7 @@
 import {httpHandler,jsonBody,response,hash} from '../shared/http.mjs';
 import {notFound,HttpError} from '../shared/errors.mjs';
 import {requireReference,listQuery,historyQuery,parseUpdate,noQuery} from './domain.mjs';
+import {isPreparationRoute,handler as preparationHandler} from '../preparation/index.mjs';
 export function createApplicationsHandler({repository,authorize,clock=()=>new Date()}){
  if(typeof authorize!=='function')throw new Error('An applications reviewer authorizer is required');
  return httpHandler(async(event,correlationId)=>{
@@ -20,4 +21,4 @@ export function createApplicationsHandler({repository,authorize,clock=()=>new Da
  });
 }
 let configured;
-export async function handler(event){configured??=Promise.all([import('./dynamo.mjs'),import('./auth.mjs')]).then(([{createApplicationsRepository},{createReviewerAuthorizer}])=>createApplicationsHandler({repository:createApplicationsRepository(),authorize:createReviewerAuthorizer()}));return (await configured)(event);}
+export async function handler(event){if(isPreparationRoute(event))return preparationHandler(event);configured??=Promise.all([import('./dynamo.mjs'),import('./auth.mjs')]).then(([{createApplicationsRepository},{createReviewerAuthorizer}])=>createApplicationsHandler({repository:createApplicationsRepository(),authorize:createReviewerAuthorizer()}));return (await configured)(event);}

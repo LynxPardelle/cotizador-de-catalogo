@@ -56,6 +56,14 @@ Los estados reflejan decisiones registradas manualmente: Contactada no envía un
 
 Cada actualización comprueba la versión observada; un conflicto requiere consultar la revisión actual antes de volver a guardar. Los reintentos idénticos conservan un solo evento. El registro recibido, la autorización de contacto y el plazo original de 90 días se mantienen, con eliminación TTL asíncrona. La [decisión de gestión privada](architecture/006-gestion-solicitudes-piloto.md) documenta los límites de acceso, paginación y retención. Esta herramienta no sustituye reclutar y observar usuarios reales; Stripe sigue pendiente.
 
+## Preparación de las organizaciones preseleccionadas
+
+El operador abre la preparación desde una solicitud Preseleccionada y comparte manualmente un enlace con su contacto. Esa persona registra y confirma su cuenta o inicia sesión con el correo de la solicitud; elige un espacio que administre y acepta su vinculación para preparar el piloto. El operador no crea cuentas o membresías en su nombre.
+
+El administrador incorpora al vendedor con Equipo y publica el catálogo por el flujo actual, con JSON revisado y datos autorizados. En la incorporación selecciona identificador y revisión publicada y confirma la autorización del catálogo. La preparación verifica cuentas habilitadas, confirmadas y con correo verificado, administración actual, un vendedor distinto y catálogo activo y vigente. Mantiene la revisión elegida aunque se publique otra.
+
+Los acuerdos de participantes, referencias de cálculo, sesiones, ayuda y tratamiento de evidencias se confirman manualmente y se conserva su historial. La preparación queda Lista para coordinar el inicio únicamente cuando las comprobaciones y acuerdos están completos y la fecha prevista no quedó en el pasado. El inicio se coordina con las personas; no ocurre automáticamente. Retirar la preselección pausa el proceso sin borrar cuentas, catálogos o propuestas. [Diseño de incorporación](architecture/007-incorporacion-del-piloto.md). Stripe sigue pendiente.
+
 ## Origen
 
 Proyecto de origen propio basado en el problema comercial identificado en novo-calculator. Los contratos, nombres, datos de ejemplo y código son nuevos. No se reutiliza información comercial ajena.

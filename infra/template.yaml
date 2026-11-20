@@ -476,6 +476,9 @@ Resources:
               - Effect: Allow
                 Action: [cognito-idp:AdminGetUser, cognito-idp:AdminListGroupsForUser]
                 Resource: !GetAtt UserPool.Arn
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: [!GetAtt TeamFunction.Arn, !GetAtt CatalogFunction.Arn]
 
   ApplicationsFunction:
     Type: AWS::Serverless::Function
@@ -487,6 +490,8 @@ Resources:
         Variables:
           INTEREST_TABLE: !Ref InterestTable
           APPLICATIONS_USER_POOL_ID: !Ref UserPool
+          TEAM_FUNCTION_NAME: !Ref TeamFunction
+          CATALOG_FUNCTION_NAME: !Ref CatalogFunction
       LoggingConfig:
         LogGroup: !Ref ApplicationsLogGroup
       Events:
@@ -524,6 +529,48 @@ Resources:
             ApiId: !Ref ProductApi
             Path: /api/v1/pilot-applications/{reference}
             Method: PATCH
+            TimeoutInMillis: 10000
+        PreparationDetail:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/{reference}/preparation
+            Method: GET
+            TimeoutInMillis: 10000
+        PreparationAgreements:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/{reference}/preparation
+            Method: PATCH
+            TimeoutInMillis: 10000
+        PreparationHistory:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-applications/{reference}/preparation/history
+            Method: GET
+            TimeoutInMillis: 10000
+        OnboardingContext:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-onboarding/{reference}
+            Method: GET
+            TimeoutInMillis: 10000
+        OnboardingLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-onboarding/{reference}/link
+            Method: POST
+            TimeoutInMillis: 10000
+        OnboardingCatalog:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Path: /api/v1/pilot-onboarding/{reference}/catalog
+            Method: POST
             TimeoutInMillis: 10000
 
   HealthLogGroup:

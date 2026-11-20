@@ -18,7 +18,7 @@ const root = await handler(request('/'), {});
 assert.equal(root.statusCode, 200);
 assert.match(root.body, /CotiTrama/);
 assert.match(root.body, /Crear cuenta|Empezar/);
-for (const path of ['/cotizar', '/catalogos', '/equipo', '/consumo', '/piloto', '/piloto/interes', '/piloto/solicitudes', '/propuestas/smoke-example']) {
+for (const path of ['/cotizar', '/catalogos', '/equipo', '/consumo', '/piloto', '/piloto/interes', '/piloto/solicitudes', '/piloto/preparacion/11111111-1111-4111-8111-111111111111', '/piloto/incorporacion/11111111-1111-4111-8111-111111111111', '/propuestas/smoke-example']) {
   const response = await handler(request(path), {});
   assert.equal(response.statusCode, 200, `${path}: ${response.body}`);
   assert.match(response.body, /CotiTrama/);

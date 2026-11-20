@@ -34,6 +34,8 @@ flowchart LR
 
 ## Límites de servicio
 
+La incorporación de organizaciones preseleccionadas amplía ApplicationsFunction con preparación y vinculación consentida. Las rutas del contacto requieren su correo actual verificado y administración del espacio elegido; las del operador conservan su grupo específico. El servicio consulta Equipo y Catálogos por IAM para obtener indicadores y metadatos mínimos, sin leer sus tablas ni conceder permisos comerciales. [Decisión de incorporación](007-incorporacion-del-piloto.md). El total sigue siendo ocho Lambdas, cuatro tablas y siete alarmas.
+
 | Servicio | Responsabilidad | Datos / permisos |
 | --- | --- | --- |
 | Web | SSR público, assets, configuración pública y navegación Angular | Sin acceso a tablas de negocio. Function URL IAM sólo invocable por CloudFront OAC. |

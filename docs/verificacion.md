@@ -2,7 +2,13 @@
 
 Verificado el 19 de noviembre de 2026. URL pública: **https://cotitrama-dev.lynxpardelle.com**. Testing y producción no se promovieron; los demás proyectos no recibieron cambios.
 
-## Última entrega de runtime: gestión privada de solicitudes
+## Incorporación de organizaciones preseleccionadas: preparación de la entrega
+
+Implementación de preparación en ApplicationsFunction y de las rutas Angular `/piloto/preparacion/<referencia>` y `/piloto/incorporacion/<referencia>`. Mantiene ocho Lambdas, cuatro tablas y siete alarmas. El contacto debe coincidir con el correo actual confirmado/verificado y autoriza un espacio donde administre actualmente; las comprobaciones técnicas y los acuerdos manuales quedan separados. La [decisión de incorporación](architecture/007-incorporacion-del-piloto.md) define los límites.
+
+Validación local: **299 pruebas correctas** (190 servicios/herramientas, 107 Angular y dos de paquete), compilación SSR y smoke de rutas profundas correctos. El bundle inicial mide 372.64 kB, transferencia estimada 100.36 kB; el componente nuevo queda dentro del presupuesto de estilos. SAM detectó una referencia errónea al recurso API en los eventos nuevos antes de preparar un despliegue; se corrigió a ProductApi. La aceptación AWS/navegador de este incremento se registra después del despliegue. Stripe sigue pendiente; no hay resultados humanos del piloto.
+
+## Entrega anterior: gestión privada de solicitudes
 
 Panel privado: **https://cotitrama-dev.lynxpardelle.com/piloto/solicitudes**. Runtime **2bd574380a1f2523d5ed1835df82e67b98d4e63e**, con SourceCommit coincidente y stack UPDATE_COMPLETE. Su [CI](https://github.com/LynxPardelle/cotizador-de-catalogo/actions/runs/44647502115) terminó correctamente. Los commits posteriores de evidencia no cambian el runtime.
 

@@ -54,3 +54,17 @@ test('loopback demo carries public intake into private review without changing i
   const history=await (await fetch(`${base}/pilot-applications/${reference}/history`)).json();assert.equal(history.items.length,1);assert.equal(history.items[0].note,update.note);
   assert.deepEqual(await (await post()).json(),{reference,status:'received'});
 });
+
+test('loopback demo links a preselected contact and checks its published catalog without inventing seller access',async(t)=>{
+  const server=await module.createDemoServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const base=`http://127.0.0.1:${server.address().port}/api/v1`,reference='44444444-4444-4444-8444-444444444444';
+  const send=(path,body,method='POST')=>fetch(base+path,{method,headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  const application={requestId:reference,organizationName:'Piloto ficticio local',contactEmail:'demo@example.invalid',sector:'Práctica',currentMethod:'manual',monthlyQuotes:'1-20',twoParticipants:'yes',timeAvailability:'yes',contactConsent:true,privacyVersion:'2026-11-19'};
+  assert.equal((await send('/pilot-interest',application)).status,202);
+  assert.equal((await send(`/pilot-applications/${reference}`,{mutationId:'55555555-5555-4555-8555-555555555555',expectedVersion:0,status:'selected',nextActionDate:'',note:''},'PATCH')).status,200);
+  const contextResponse=await fetch(`${base}/pilot-onboarding/${reference}`);assert.equal(contextResponse.status,200);const context=await contextResponse.json();assert.ok(context.adminWorkspaces.some(workspace=>workspace.workspaceId==='demo'));
+  const linked=await send(`/pilot-onboarding/${reference}/link`,{mutationId:'66666666-6666-4666-8666-666666666666',expectedVersion:0,workspaceId:'demo',participationConsent:true,sharingConsent:true,consentVersion:'2026-11-19'});assert.equal(linked.status,200);
+  const catalog=await send(`/pilot-onboarding/${reference}/catalog`,{mutationId:'77777777-7777-4777-8777-777777777777',expectedVersion:1,catalogId:'oficina',version:1,catalogAuthorized:true,consentVersion:'2026-11-19'});assert.equal(catalog.status,200);
+  const preparation=await (await fetch(`${base}/pilot-applications/${reference}/preparation`)).json();assert.equal(preparation.readiness.catalog.ready,true);assert.equal(preparation.readiness.access.adminReady,true);assert.equal(preparation.readiness.access.sellerReady,false);assert.notEqual(preparation.readiness.state,'ready');assert.ok(!JSON.stringify(preparation).includes('basePriceMinor'));
+  assert.deepEqual(await (await send('/pilot-interest',application)).json(),{reference,status:'received'});
+});

@@ -10,7 +10,7 @@ export function createCognitoUsers({client=new CognitoIdentityProviderClient({})
       catch(error) {if(error.name==='UserNotFoundException') throw noAccess();throw error;}
       const attributes=Object.fromEntries((result.UserAttributes ?? []).map(attribute=>[attribute.Name,attribute.Value]));
       if(attributes.sub!==subject || !result.Enabled) throw noAccess();
-      return {subject,email:attributes.email,emailVerified:attributes.email_verified==='true'};
+      return {subject,email:attributes.email,emailVerified:attributes.email_verified==='true',confirmed:result.UserStatus==='CONFIRMED'};
     },
     async groups(subject){
       const names=[];let NextToken;

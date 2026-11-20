@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+const mod=await import('./auth.mjs').catch(()=>({}));
+const subject='11111111-1111-4111-8111-111111111111';
+const event=()=>({requestContext:{authorizer:{jwt:{claims:{sub:subject,token_use:'access'}}}}});
+const user=(change={})=>({Enabled:true,UserStatus:'CONFIRMED',UserAttributes:[{Name:'sub',Value:subject},{Name:'email',Value:' Contact@Example.invalid '},{Name:'email_verified',Value:'true'}],...change});
+const identify=value=>{assert.equal(typeof mod.createPreparationIdentity,'function');const commands=[];return {commands,identify:mod.createPreparationIdentity({userPoolId:'own-pool',client:{async send(command){commands.push(command);if(value instanceof Error)throw value;return value;}}})};};
+test('participant identity uses current enabled confirmed verified account and canonical email, not JWT email claims',async()=>{const x=identify(user());assert.deepEqual(await x.identify(event()),{subject,email:'contact@example.invalid'});assert.deepEqual(x.commands[0].input,{UserPoolId:'own-pool',Username:subject});});
+test('missing access token never queries the pool and unavailable or unverified identities are denied without email disclosure',async()=>{const x=identify(user());await assert.rejects(x.identify({}),{statusCode:401});assert.equal(x.commands.length,0);for(const value of [user({Enabled:false}),user({UserStatus:'UNCONFIRMED'}),user({UserAttributes:[{Name:'sub',Value:subject},{Name:'email',Value:'contact@example.invalid'},{Name:'email_verified',Value:'false'}]}),Object.assign(new Error('private user'),{name:'UserNotFoundException'})])await assert.rejects(identify(value).identify(event()),error=>error.statusCode===403&&!error.message.includes('contact'));});

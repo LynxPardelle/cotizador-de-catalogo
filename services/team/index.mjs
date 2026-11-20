@@ -40,6 +40,33 @@ export function createTeamHandler({repository,users,clock=()=>new Date(),newToke
     if(!member) throw noAccess();
     return {subject,organizationId:member.organizationId,role:member.role,plan:current.plan};
   }
+  const pilotLimit=()=>new HttpError(503,'PILOT_TEAM_LIMIT','No pudimos completar la verificación acotada del equipo.');
+  async function pilotUser(subject){
+    try{const user=await users.get(subject);return user?.subject===subject&&user.confirmed===true&&user.emailVerified===true?user:undefined;}
+    catch(error){if(error instanceof HttpError&&error.statusCode===403)return undefined;throw error;}
+  }
+  function pilotMembers(rows,maximum,organizationId,subject){
+    if(!Array.isArray(rows)||rows.length>maximum)throw pilotLimit();const seen=new Set();
+    for(const member of rows){
+      if(!member||!roles.includes(member.role)||typeof member.organizationId!=='string'||(organizationId&&member.organizationId!==organizationId)||(subject&&member.subject!==subject))throw pilotLimit();
+      try{subjectId(member.subject);requireId(member.organizationId);}catch{throw pilotLimit();}
+      const id=subject?member.organizationId:member.subject;if(seen.has(id))throw pilotLimit();seen.add(id);
+    }
+    return rows;
+  }
+  async function pilotAdminWorkspaces(subject){
+    subjectId(subject);if(!await pilotUser(subject))throw noAccess();
+    const rows=pilotMembers(await repository.pilotMemberships(subject),32,undefined,subject);
+    return rows.filter(member=>member.role==='admin').map(member=>({workspaceId:member.organizationId,label:`Espacio ${member.organizationId.slice(0,8)}`})).sort((a,b)=>a.workspaceId.localeCompare(b.workspaceId));
+  }
+  async function pilotReadiness(subject,organizationId){
+    subjectId(subject);requireId(organizationId);
+    if((await repository.member(organizationId,subject))?.role!=='admin')throw noAccess();
+    const members=pilotMembers(await repository.pilotMembers(organizationId),25,organizationId);
+    const checked=await Promise.all(members.map(async member=>({member,verified:!!await pilotUser(member.subject)})));
+    if(!checked.some(value=>value.member.subject===subject&&value.member.role==='admin'&&value.verified))throw noAccess();
+    return {adminReady:true,sellerReady:checked.some(value=>value.member.subject!==subject&&value.member.role==='seller'&&value.verified),verifiedMembers:checked.filter(value=>value.verified).length};
+  }
   const publicHandler=httpHandler(async(event,correlationId)=>{
     const subject=subjectId(accessSubject(event));
     const selected=Object.entries(event.headers ?? {}).find(([name])=>name.toLowerCase()==='x-organization-id')?.[1];
@@ -77,6 +104,10 @@ export function createTeamHandler({repository,users,clock=()=>new Date(),newToke
     throw notFound();
   });
   return async event=>{
+    if(!event?.requestContext&&['pilotAdminWorkspaces','pilotReadiness'].includes(event?.operation)){
+      try{return event.operation==='pilotAdminWorkspaces'?await pilotAdminWorkspaces(event.subject):await pilotReadiness(event.subject,event.organizationId);}
+      catch(error){if(error instanceof HttpError)return {error:{statusCode:error.statusCode,code:error.code,message:error.message}};throw error;}
+    }
     if(!event?.requestContext && event?.operation==='authorizeMembership') {
       try {return await authorize(subjectId(event.subject),event.organizationId);}
       catch(error) {if(error instanceof HttpError) return {error:{statusCode:error.statusCode,code:error.code,message:error.message}};throw error;}
